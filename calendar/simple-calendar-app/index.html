@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>AI-Integrated Calendar App</title>
+    <style>
+      :root {
+        --bg-color: #1e1e1e;
+        --sidebar-bg: #262626;
+        --border-color: #444;
+        --text-color: #e1e1e1;
+        --text-muted: #888;
+        --highlight-color: #ff5722;
+        --toolbar-bg: #2c2c2c;
+        --card-bg: #303030;
+        --green-event: rgba(46, 125, 50, 0.8);
+        --blue-event: rgba(33, 150, 243, 0.8);
+        --current-day-bg: #404040;
+        --chatbot-bg: #262626;
+        --chatbot-border: #333;
+        --button-primary: #4a4a4a;
+        --button-secondary: transparent;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      }
+
+      body {
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      /* App container */
+      .app-container {
+        display: flex;
+        width: 100%;
+        height: 100vh;
+      }
+
+      /* Sidebar */
+      .sidebar {
+        width: 240px;
+        background-color: var(--sidebar-bg);
+        border-right: 1px solid var(--border-color);
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        padding: 16px;
+      }
+
+      .sidebar-top {
+        flex: 1;
+      }
+
+      .sidebar-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        cursor: pointer;
+      }
+
+      .sidebar-footer {
+        padding-top: 20px;
+        border-top: 1px solid var(--border-color);
+      }
+
+      .sidebar-icon {
+        width: 24px;
+        height: 24px;
+        margin-right: 8px;
+        opacity: 0.7;
+      }
+
+      .user-email {
+        color: var(--text-muted);
+        font-size: 14px;
+        margin: 10px 0;
+      }
+
+      .add-account {
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        padding: 8px 0;
+        cursor: pointer;
+      }
+
+      .add-account:hover {
+        color: var(--text-color);
+      }
+
+      .workspace-name {
+        margin: 20px 0 10px;
+        font-weight: 500;
+      }
+
+      /* Main content */
+      .main-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        position: relative;
+      }
+
+      /* Toolbar */
+      .toolbar {
+        display: flex;
+        padding: 12px 20px;
+        background-color: var(--toolbar-bg);
+        align-items: center;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .view-dropdown, .today-btn {
+        background-color: #3d3d3d;
+        color: var(--text-color);
+        border: none;
+        padding: 6px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+      }
+
+      .month-header {
+        margin-left: 20px;
+        font-size: 24px;
+        font-weight: 500;
+      }
+
+      /* Month name & icons */
+      .month-year {
+        display: flex;
+        align-items: center;
+      }
+
+      .nav-icons {
+        display: flex;
+        margin-left: auto;
+      }
+
+      .icon-btn {
+        background: none;
+        border: none;
+        color: var(--text-color);
+        font-size: 18px;
+        cursor: pointer;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        margin-left: 8px;
+      }
+
+      .icon-btn:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+
+      /* Calendar */
+      .calendar-container {
+        flex: 1;
+        overflow: auto;
+        padding: 10px;
+      }
+
+      .calendar {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        grid-auto-rows: minmax(100px, 1fr);
+        gap: 1px;
+        height: calc(100% - 30px);
+      }
+
+      .calendar-header {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        text-align: center;
+        font-weight: 500;
+        padding-bottom: 10px;
+      }
+
+      .calendar-cell {
+        border: 1px solid var(--border-color);
+        padding: 8px;
+        position: relative;
+        background-color: var(--card-bg);
+      }
+
+      .date-number {
+        font-size: 14px;
+        opacity: 0.7;
+        margin-bottom: 8px;
+      }
+
+      .current-day {
+        background-color: var(--current-day-bg);
+      }
+
+      .current-day .date-number {
+        color: white;
+        font-weight: bold;
+        opacity: 1;
+        background-color: var(--highlight-color);
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+      }
+
+      .calendar-event {
+        padding: 2px 6px;
+        margin-bottom: 4px;
+        border-radius: 3px;
+        font-size: 12px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        cursor: pointer;
+      }
+
+      .green-event {
+        background-color: var(--green-event);
+      }
+
+      .blue-event {
+        background-color: var(--blue-event);
+      }
+
+      .other-month {
+        opacity: 0.5;
+      }
+
+      /* Chatbot sidebar */
+      .chatbot-sidebar {
+        width: 380px;
+        background-color: var(--chatbot-bg);
+        border-left: 1px solid var(--chatbot-border);
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+      }
+
+      .chatbot-header {
+        padding: 16px;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .chatbot-title {
+        font-size: 16px;
+        font-weight: 500;
+      }
+
+      .chatbot-controls {
+        display: flex;
+      }
+
+      .chatbot-control-btn {
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        margin-left: 12px;
+        cursor: pointer;
+        font-size: 16px;
+      }
+
+      .chatbot-content {
+        flex: 1;
+        padding: 16px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .generating-line {
+        display: flex;
+        align-items: center;
+        color: var(--text-muted);
+        font-size: 14px;
+        padding: 4px 8px;
+      }
+
+      .caret-icon {
+        margin-right: 8px;
+        opacity: 0.6;
+      }
+
+      .action-buttons {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      .btn {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        background-color: #333;
+        color: var(--text-muted);
+        border: 1px solid var(--border-color);
+        cursor: pointer;
+      }
+
+      /* Context box */
+      .context-box {
+        border-radius: 6px;
+        overflow: hidden;
+        border: 1px solid var(--border-color);
+      }
+
+      .context-header {
+        padding: 8px 12px;
+        display: flex;
+        align-items: center;
+        font-size: 13px;
+        color: var(--text-muted);
+      }
+
+      .context-icon {
+        width: 16px;
+        height: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--text-muted);
+        border-radius: 50%;
+        margin-right: 8px;
+        font-size: 14px;
+      }
+
+      .context-input {
+        padding: 8px 12px;
+        color: var(--text-muted);
+        font-size: 14px;
+        border-top: 1px solid var(--border-color);
+      }
+
+      /* Agent info */
+      .agent-bar {
+        display: flex;
+        align-items: center;
+        padding: 8px 12px;
+        background-color: rgba(0, 0, 0, 0.2);
+        border-radius: 6px;
+      }
+
+      .agent-icon {
+        opacity: 0.5;
+        margin-right: 6px;
+        font-size: 14px;
+      }
+
+      .agent-name {
+        display: flex;
+        align-items: center;
+        font-size: 13px;
+        color: var(--text-muted);
+      }
+
+      .agent-number {
+        margin-left: 4px;
+        font-weight: normal;
+      }
+
+      .agent-model {
+        margin-left: auto;
+        font-size: 13px;
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .tool-icon {
+        width: 20px;
+        height: 20px;
+        opacity: 0.6;
+      }
+
+      /* Chat footer */
+      .chatbot-footer {
+        padding: 16px;
+        border-top: 1px solid var(--border-color);
+      }
+
+      .chat-input {
+        display: flex;
+        background-color: rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid var(--border-color);
+        height: 40px;
+      }
+
+      .chat-input input {
+        flex: 1;
+        padding: 0 16px;
+        background: transparent;
+        border: none;
+        color: var(--text-color);
+        font-size: 14px;
+      }
+
+      .chat-input input:focus {
+        outline: none;
+      }
+
+      .chat-hint {
+        color: var(--text-muted);
+        font-size: 13px;
+        display: flex;
+        justify-content: space-between;
+        margin-top: 12px;
+      }
+
+      .new-chat {
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-container">
+      <!-- Left Sidebar -->
+      <div class="sidebar">
+        <div class="sidebar-top">
+          <div class="sidebar-heading">
+            <span>Scheduling</span>
+            <span class="sidebar-icon">👁️</span>
+          </div>
+          <div class="user-email">ithegreenguy@gmail.com</div>
+          <div class="add-account">
+            <span class="sidebar-icon">+</span>
+            <span>Add calendar account</span>
+          </div>
+          <div class="workspace-name">Ethan Pae's Notion</div>
+        </div>
+        <div class="sidebar-footer">
+          <div class="sidebar-icon">🗒️</div>
+        </div>
+      </div>
+
+      <!-- Main Calendar -->
+      <div class="main-content">
+        <div class="toolbar">
+          <button type="button" class="view-dropdown">Month ▾</button>
+          <button type="button" class="today-btn">Today</button>
+          <div class="month-year">
+            <h2 class="month-header">May 2025</h2>
+          </div>
+          <div class="nav-icons">
+            <button type="button" class="icon-btn">←</button>
+            <button type="button" class="icon-btn">→</button>
+          </div>
+        </div>
+
+        <div class="calendar-container">
+          <div class="calendar-header">
+            <div>Sun</div>
+            <div>Mon</div>
+            <div>Tue</div>
+            <div>Wed</div>
+            <div>Thu</div>
+            <div>Fri</div>
+            <div>Sat</div>
+          </div>
+          <div class="calendar">
+            <!-- Week 1 -->
+            <div class="calendar-cell other-month">
+              <div class="date-number">27</div>
+            </div>
+            <div class="calendar-cell other-month">
+              <div class="date-number">28</div>
+            </div>
+            <div class="calendar-cell other-month">
+              <div class="date-number">29</div>
+            </div>
+            <div class="calendar-cell other-month">
+              <div class="date-number">30</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">1</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">2</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">3</div>
+            </div>
+
+            <!-- Week 2 -->
+            <div class="calendar-cell">
+              <div class="date-number">4</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">5</div>
+              <div class="calendar-event green-event">Cinco de Mayo</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">6</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">7</div>
+              <div class="calendar-event blue-event">Clean up house</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">8</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">9</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">10</div>
+            </div>
+
+            <!-- Week 3 -->
+            <div class="calendar-cell">
+              <div class="date-number">11</div>
+              <div class="calendar-event green-event">Mother's Day</div>
+            </div>
+            <div class="calendar-cell current-day">
+              <div class="date-number">12</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">13</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">14</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">15</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">16</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">17</div>
+            </div>
+
+            <!-- Week 4 -->
+            <div class="calendar-cell">
+              <div class="date-number">18</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">19</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">20</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">21</div>
+              <div class="calendar-event blue-event">Clean office</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">22</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">23</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">24</div>
+              <div class="calendar-event blue-event">Mom's birthday</div>
+            </div>
+
+            <!-- Week 5 -->
+            <div class="calendar-cell">
+              <div class="date-number">25</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">26</div>
+              <div class="calendar-event green-event">Memorial Day</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">27</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">28</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">29</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">30</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">31</div>
+            </div>
+
+            <!-- Week 6 (June) -->
+            <div class="calendar-cell other-month">
+              <div class="date-number">1</div>
+            </div>
+            <div class="calendar-cell other-month">
+              <div class="date-number">2</div>
+            </div>
+            <div class="calendar-cell other-month">
+              <div class="date-number">3</div>
+            </div>
+            <div class="calendar-cell other-month">
+              <div class="date-number">4</div>
+              <div class="calendar-event blue-event">Clean kitchen</div>
+            </div>
+            <div class="calendar-cell other-month">
+              <div class="date-number">5</div>
+            </div>
+            <div class="calendar-cell other-month">
+              <div class="date-number">6</div>
+            </div>
+            <div class="calendar-cell other-month">
+              <div class="date-number">7</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Chatbot Sidebar -->
+      <div class="chatbot-sidebar">
+        <div class="chatbot-header">
+          <div class="chatbot-title">Building an AI-Integrated Calendar App</div>
+          <div class="chatbot-controls">
+            <button type="button" class="chatbot-control-btn">+</button>
+            <button type="button" class="chatbot-control-btn">⋯</button>
+            <button type="button" class="chatbot-control-btn">×</button>
+          </div>
+        </div>
+        <div class="chatbot-content">
+          <div>
+            <div class="generating-line">
+              <div class="caret-icon">›</div>
+              <span>Generating...</span>
+            </div>
+            <div class="action-buttons">
+              <button type="button" class="btn">Stop</button>
+              <button type="button" class="btn">Accept all ⌘⇧↵</button>
+            </div>
+          </div>
+          <div class="context-box">
+            <div class="context-header">
+              <div class="context-icon">+</div>
+              <span>Add context</span>
+            </div>
+            <div class="context-input">
+              Plan, search, build anything
+            </div>
+          </div>
+          <div class="agent-bar">
+            <span class="agent-icon">∞</span>
+            <div class="agent-name">Agent #1</div>
+            <div class="agent-model">
+              <span>claude-3.7-sonnet</span>
+              <div class="tool-icon">🖼️</div>
+              <div class="tool-icon">📄</div>
+            </div>
+          </div>
+        </div>
+        <div class="chatbot-footer">
+          <div class="chat-input">
+            <input type="text" placeholder="Ask about calendar functionality...">
+          </div>
+          <div class="chat-hint">
+            <span>Start a new chat for better results.</span>
+            <span class="new-chat">New chat</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Handle adding events from AI prompts
+      document.querySelector('.chatbot-footer .chat-input input').addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+          const promptValue = this.value.trim();
+          if (promptValue) {
+            // Create a new event element
+            const eventElement = document.createElement('div');
+            eventElement.className = 'calendar-event blue-event';
+            eventElement.textContent = promptValue;
+            
+            // Add to today's cell
+            const calendarCell = document.querySelector('.current-day');
+            calendarCell.appendChild(eventElement);
+            
+            // Clear input
+            this.value = '';
+          }
+        }
+      });
+
+      // Handle date navigation
+      document.querySelector('.today-btn').addEventListener('click', function() {
+        alert('Navigate to today');
+      });
+
+      // Handle next/previous month
+      document.querySelectorAll('.icon-btn').forEach((btn, index) => {
+        btn.addEventListener('click', function() {
+          alert(index === 0 ? 'Previous month' : 'Next month');
+        });
+      });
+    </script>
+  </body>
+</html> 
