@@ -4,8 +4,11 @@
   "description": "AI-powered desktop calendar application",
   "main": "main/main.js",
   "scripts": {
-    "start": "electron .",
-    "dev": "cross-env NODE_ENV=development electron ."
+    "start": "cross-env ELECTRON_START_URL=http://localhost:3000 electron .",
+    "dev": "cross-env NODE_ENV=development concurrently \"npm run react-start\" \"wait-on http://localhost:3000 && npm run start\"",
+    "react-start": "react-scripts start",
+    "build": "react-scripts build",
+    "electron": "electron ."
   },
   "keywords": ["calendar", "ai", "electron", "react"],
   "author": "",

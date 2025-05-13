@@ -21,15 +21,34 @@ const localizer = dateFnsLocalizer({
   locales,
 });
 
+// Custom time indicator component for showing current time with a red line
+const TimeIndicator = ({ style }) => (
+  <div className="rbc-current-time-indicator" style={style}>
+    <div className="rbc-current-time-label">
+      {format(new Date(), 'h:mm a')}
+    </div>
+  </div>
+);
+
 function App() {
   const [events, setEvents] = useState([]);
   const [view, setView] = useState('month');
   const [date, setDate] = useState(new Date());
+  const [now, setNow] = useState(new Date());
 
   // Load events from storage on initial render
   useEffect(() => {
     const storedEvents = dataService.getEvents();
     setEvents(storedEvents);
+  }, []);
+
+  // Update current time every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNow(new Date());
+    }, 60000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   // Handle AI prompt submissions
@@ -102,6 +121,15 @@ function App() {
           onSelectEvent={handleSelectEvent}
           onSelectSlot={handleSelectSlot}
           selectable
+          now={now}
+          components={{
+            timeGutterHeader: () => (
+              <div className="rbc-time-header-gutter-current">
+                {format(now, 'h:mm a')}
+              </div>
+            ),
+            currentTimeIndicator: TimeIndicator
+          }}
         />
       </div>
       

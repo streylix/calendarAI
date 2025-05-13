@@ -41,17 +41,45 @@
         display: flex;
         width: 100%;
         height: 100vh;
+        position: relative;
       }
 
       /* Sidebar */
       .sidebar {
-        width: 240px;
+        width: 300px;
         background-color: var(--sidebar-bg);
         border-right: 1px solid var(--border-color);
         display: flex;
         flex-direction: column;
         height: 100vh;
         padding: 16px;
+        position: relative;
+        transition: width 0.1s ease;
+        min-width: 280px;
+        max-width: 600px;
+      }
+
+      /* Resize handle for the sidebar */
+      .sidebar-resize-handle {
+        position: absolute;
+        top: 0;
+        right: -4px;
+        width: 8px;
+        height: 100%;
+        cursor: ew-resize;
+        z-index: 100;
+      }
+      
+      .sidebar-resize-handle:hover,
+      .sidebar-resize-handle.active {
+        background-color: var(--highlight-color);
+        opacity: 0.3;
+      }
+      
+      /* When resizing is in progress */
+      .sidebar-resizing {
+        user-select: none;
+        cursor: ew-resize;
       }
 
       .sidebar-top {
@@ -593,12 +621,215 @@
       .new-chat {
         cursor: pointer;
       }
+      
+      /* Event creation styles */
+      .calendar-cell {
+        cursor: pointer;
+      }
+      
+      .dragging-event {
+        background-color: rgba(33, 150, 243, 0.4);
+        position: absolute;
+        border: 1px dashed rgba(33, 150, 243, 0.8);
+        border-radius: 3px;
+        z-index: 10;
+        pointer-events: none;
+      }
+      
+      /* Event form styles */
+      .create-event-sidebar {
+        width: 100%;
+        height: 100%;
+        background-color: var(--sidebar-bg);
+        position: absolute;
+        top: 0;
+        left: 0;
+        display: none;
+        flex-direction: column;
+        z-index: 100;
+        overflow-y: auto;
+      }
+      
+      .create-event-sidebar.active {
+        display: flex;
+      }
+      
+      .event-form-header {
+        display: flex;
+        align-items: center;
+        padding: 16px;
+        border-bottom: 1px solid var(--border-color);
+      }
+      
+      .back-btn {
+        background: none;
+        border: none;
+        color: var(--text-color);
+        font-size: 18px;
+        cursor: pointer;
+        margin-right: 12px;
+      }
+      
+      .event-form-title {
+        font-size: 18px;
+        font-weight: 500;
+      }
+      
+      .event-form-content {
+        padding: 16px;
+        flex: 1;
+        overflow: auto;
+      }
+      
+      .event-form-field {
+        margin-bottom: 20px;
+      }
+      
+      .event-form-label {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 14px;
+        color: var(--text-muted);
+      }
+      
+      .event-form-input {
+        width: 100%;
+        padding: 8px 10px;
+        background-color: rgba(0, 0, 0, 0.2);
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        color: var(--text-color);
+        font-size: 14px;
+      }
+      
+      .event-form-input:focus {
+        outline: none;
+        border-color: var(--highlight-color);
+      }
+      
+      .event-datetime {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      
+      .datetime-field {
+        flex: 1;
+      }
+      
+      .event-form-select {
+        width: 100%;
+        padding: 8px 10px;
+        background-color: rgba(0, 0, 0, 0.2);
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        color: var(--text-color);
+        font-size: 14px;
+        appearance: none;
+        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right 8px center;
+        background-size: 16px;
+      }
+      
+      .event-form-checkbox {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      
+      .event-form-checkbox input[type="checkbox"] {
+        margin-right: 8px;
+      }
+      
+      .color-options {
+        display: flex;
+        gap: 10px;
+        margin-top: 8px;
+      }
+      
+      .color-option {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        cursor: pointer;
+        border: 2px solid transparent;
+      }
+      
+      .color-option.selected {
+        border-color: white;
+      }
+      
+      .color-blue {
+        background-color: var(--blue-event);
+      }
+      
+      .color-green {
+        background-color: var(--green-event);
+      }
+      
+      .color-purple {
+        background-color: rgba(156, 39, 176, 0.8);
+      }
+      
+      .color-red {
+        background-color: rgba(229, 57, 53, 0.8);
+      }
+      
+      .repeat-options {
+        display: none;
+        margin-top: 8px;
+      }
+      
+      .repeat-options.active {
+        display: block;
+      }
+      
+      .event-form-footer {
+        padding: 16px;
+        border-top: 1px solid var(--border-color);
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+      
+      .event-form-btn {
+        padding: 8px 16px;
+        border-radius: 4px;
+        font-size: 14px;
+        cursor: pointer;
+        border: none;
+      }
+      
+      .cancel-btn {
+        background-color: transparent;
+        color: var(--text-color);
+        border: 1px solid var(--border-color);
+      }
+      
+      .save-btn {
+        background-color: var(--highlight-color);
+        color: white;
+      }
+      
+      /* Week/day view event creation */
+      .hour-cell {
+        cursor: pointer;
+      }
+
+      /* Media query to handle responsive layout */
+      @media (min-width: 350px) {
+        .event-datetime {
+          flex-direction: row;
+        }
+      }
     </style>
   </head>
   <body>
     <div class="app-container">
       <!-- Left Sidebar -->
       <div class="sidebar">
+        <div class="sidebar-resize-handle"></div>
         <div class="sidebar-top">
           <div class="sidebar-heading">
             <span>Scheduling</span>
@@ -613,6 +844,89 @@
         </div>
         <div class="sidebar-footer">
           <div class="sidebar-icon">🗒️</div>
+        </div>
+        <!-- Create Event Form -->
+        <div class="create-event-sidebar">
+          <div class="event-form-header">
+            <button type="button" class="back-btn">←</button>
+            <div class="event-form-title">Create event</div>
+          </div>
+          <div class="event-form-content">
+            <div class="event-form-field">
+              <input type="text" class="event-form-input" id="event-title" placeholder="Add title">
+            </div>
+            <div class="event-form-field event-datetime">
+              <div class="datetime-field">
+                <label class="event-form-label">Start date</label>
+                <input type="date" class="event-form-input" id="event-start-date">
+              </div>
+              <div class="datetime-field">
+                <label class="event-form-label">Start time</label>
+                <input type="time" class="event-form-input" id="event-start-time">
+              </div>
+            </div>
+            <div class="event-form-field event-datetime">
+              <div class="datetime-field">
+                <label class="event-form-label">End date</label>
+                <input type="date" class="event-form-input" id="event-end-date">
+              </div>
+              <div class="datetime-field">
+                <label class="event-form-label">End time</label>
+                <input type="time" class="event-form-input" id="event-end-time">
+              </div>
+            </div>
+            <div class="event-form-field">
+              <div class="event-form-checkbox">
+                <input type="checkbox" id="all-day">
+                <label for="all-day">All day</label>
+              </div>
+            </div>
+            <div class="event-form-field">
+              <label class="event-form-label">Location</label>
+              <input type="text" class="event-form-input" id="event-location" placeholder="Add location">
+            </div>
+            <div class="event-form-field">
+              <label class="event-form-label">Description</label>
+              <textarea class="event-form-input" id="event-description" rows="3" placeholder="Add description"></textarea>
+            </div>
+            <div class="event-form-field">
+              <label class="event-form-label">Color</label>
+              <div class="color-options">
+                <div class="color-option color-blue selected" data-color="blue"></div>
+                <div class="color-option color-green" data-color="green"></div>
+                <div class="color-option color-purple" data-color="purple"></div>
+                <div class="color-option color-red" data-color="red"></div>
+              </div>
+            </div>
+            <div class="event-form-field">
+              <div class="event-form-checkbox">
+                <input type="checkbox" id="repeat-event">
+                <label for="repeat-event">Repeat</label>
+              </div>
+              <div class="repeat-options">
+                <select class="event-form-select" id="repeat-frequency">
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+              </div>
+            </div>
+            <div class="event-form-field">
+              <label class="event-form-label">Notification</label>
+              <select class="event-form-select" id="notification-time">
+                <option value="none">None</option>
+                <option value="10-min">10 minutes before</option>
+                <option value="30-min">30 minutes before</option>
+                <option value="1-hour">1 hour before</option>
+                <option value="1-day">1 day before</option>
+              </select>
+            </div>
+          </div>
+          <div class="event-form-footer">
+            <button type="button" class="event-form-btn cancel-btn">Cancel</button>
+            <button type="button" class="event-form-btn save-btn">Save</button>
+          </div>
         </div>
       </div>
 
@@ -1025,6 +1339,163 @@
             sidebar.style.display = 'flex';
             document.body.removeChild(reopenBtn);
           });
+        });
+        
+        // Event creation handlers
+        let isMouseDown = false;
+        let startCell = null;
+        let startTime = null;
+        let dragIndicator = null;
+        let eventData = {
+          title: '',
+          startDate: '',
+          startTime: '',
+          endDate: '',
+          endTime: '',
+          allDay: false,
+          location: '',
+          description: '',
+          color: 'blue',
+          repeat: false,
+          repeatFrequency: 'daily',
+          notification: 'none'
+        };
+        
+        // Month view event creation with click and drag
+        const calendarCells = document.querySelectorAll('.calendar-cell');
+        const calendarContainer = document.querySelector('.calendar-container');
+        
+        calendarCells.forEach((cell, index) => {
+          // Handle clicking on existing events for edit
+          const events = cell.querySelectorAll('.calendar-event');
+          events.forEach(event => {
+            event.addEventListener('click', function(e) {
+              // This event handler is overridden by the one set in script.js
+              // The click handler is now managed in the script.js createEvent function
+              e.stopPropagation();
+            });
+          });
+          
+          // Click and drag for event creation
+          cell.addEventListener('mousedown', function(e) {
+            if (e.target.classList.contains('calendar-event') || e.target.classList.contains('date-number')) {
+              return; // Don't start drag when clicking on existing event or date number
+            }
+            
+            isMouseDown = true;
+            startCell = cell;
+            
+            // Create drag indicator
+            dragIndicator = document.createElement('div');
+            dragIndicator.className = 'dragging-event';
+            
+            // Position at the cursor location
+            const cellRect = cell.getBoundingClientRect();
+            const offsetY = e.clientY - cellRect.top;
+            
+            // Start the drag indicator at the cell
+            dragIndicator.style.left = `${cell.offsetLeft}px`;
+            dragIndicator.style.top = `${cell.offsetTop + offsetY}px`;
+            dragIndicator.style.width = `${cell.offsetWidth}px`;
+            dragIndicator.style.height = '20px';
+            
+            calendarContainer.appendChild(dragIndicator);
+            
+            // Prevent text selection during drag
+            e.preventDefault();
+          });
+        });
+        
+        // Move event while dragging
+        document.addEventListener('mousemove', function(e) {
+          if (isMouseDown && dragIndicator) {
+            const calendarRect = calendarContainer.getBoundingClientRect();
+            const mouseY = e.clientY - calendarRect.top + calendarContainer.scrollTop;
+            
+            // Update height of drag indicator
+            const startY = startCell.offsetTop;
+            const currentHeight = mouseY - startY;
+            
+            if (currentHeight > 20) {
+              dragIndicator.style.height = `${currentHeight}px`;
+            }
+          }
+        });
+        
+        // End drag operation and create event
+        document.addEventListener('mouseup', function() {
+          if (isMouseDown && dragIndicator) {
+            isMouseDown = false;
+            
+            // Calculate which cells were selected by the drag
+            const dragRect = dragIndicator.getBoundingClientRect();
+            const endY = dragRect.bottom;
+            
+            // Find the end cell based on the drag position
+            let endCell = startCell;
+            let endCellFound = false;
+            
+            calendarCells.forEach(cell => {
+              const cellRect = cell.getBoundingClientRect();
+              if (cellRect.top <= endY && cellRect.bottom >= endY) {
+                endCell = cell;
+                endCellFound = true;
+              }
+            });
+            
+            // If no end cell found, use the cell at the drag indicator bottom
+            if (!endCellFound) {
+              // Find the closest cell
+              let minDistance = Number.MAX_VALUE;
+              calendarCells.forEach(cell => {
+                const cellRect = cell.getBoundingClientRect();
+                const distance = Math.abs(cellRect.top - endY);
+                if (distance < minDistance) {
+                  minDistance = distance;
+                  endCell = cell;
+                }
+              });
+            }
+            
+            // Get the dates for the drag range
+            const startDay = startCell.querySelector('.date-number').textContent;
+            const endDay = endCell.querySelector('.date-number').textContent;
+            const monthHeader = document.querySelector('.month-header').textContent;
+            const [month, year] = monthHeader.split(' ');
+            
+            const startDate = new Date(`${month} ${startDay}, ${year}`);
+            const endDate = new Date(`${month} ${endDay}, ${year}`);
+            
+            // If start date is after end date, swap them (for upward drags)
+            if (startDate > endDate) {
+              [startDate, endDate] = [endDate, startDate];
+            }
+            
+            // Format dates as YYYY-MM-DD strings for the event creation
+            const formatDateForEvent = (date) => {
+              const year = date.getFullYear();
+              const month = String(date.getMonth() + 1).padStart(2, '0');
+              const day = String(date.getDate()).padStart(2, '0');
+              return `${year}-${month}-${day}`;
+            };
+            
+            // Use the showEventSidebar from script.js instead of openEventForm
+            // This ensures consistent event handling across all views
+            const eventData = {
+              startDate: formatDateForEvent(startDate),
+              endDate: formatDateForEvent(endDate),
+              startHour: 'all-day', // Mark this as an all-day event
+              endHour: 'all-day',
+              allDay: true
+            };
+            
+            // Access the showEventSidebar function from the global scope
+            window.showEventSidebar ? window.showEventSidebar(eventData, false) : null;
+            
+            // Remove drag indicator
+            dragIndicator.remove();
+            dragIndicator = null;
+          }
         });
       });
     </script>
