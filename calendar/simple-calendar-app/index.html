@@ -254,7 +254,7 @@
       }
 
       .chatbot-header {
-        padding: 16px;
+        padding: 8px 10px;
         border-bottom: 1px solid var(--border-color);
         display: flex;
         align-items: center;
@@ -262,21 +262,182 @@
       }
 
       .chatbot-title {
-        font-size: 16px;
+        font-size: 14px;
         font-weight: 500;
+        padding: 5px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        max-width: 240px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex: 1;
+      }
+      
+      .chatbot-title:hover {
+        background-color: rgba(255, 255, 255, 0.1);
       }
 
       .chatbot-controls {
         display: flex;
+        align-items: center;
+        gap: 1px;
+        margin-left: auto;
       }
 
-      .chatbot-control-btn {
+      .control-wrapper {
+        position: relative;
+        display: inline-block;
+        margin-left: -1px;
+      }
+
+      .chatbot-control-btn, .history-button {
         background: none;
         border: none;
         color: var(--text-muted);
-        margin-left: 12px;
         cursor: pointer;
         font-size: 16px;
+        width: 22px;
+        height: 22px;
+        border-radius: 3px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        padding: 0;
+      }
+      
+      .chatbot-control-btn:hover, .history-button:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        color: var(--text-color);
+      }
+      
+      /* Active state for buttons */
+      .chatbot-control-btn.active, .history-button.active {
+        background-color: rgba(255, 255, 255, 0.15);
+        color: var(--text-color);
+      }
+      
+      .tooltip {
+        position: absolute;
+        bottom: -30px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #333;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        white-space: nowrap;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s, visibility 0.2s;
+        z-index: 1000;
+        pointer-events: none;
+      }
+      
+      .control-wrapper:hover .tooltip {
+        opacity: 1;
+        visibility: visible;
+      }
+      
+      /* Prevent tooltip overlap */
+      .control-wrapper:nth-child(1) .tooltip {
+        transform: translateX(-30%);
+      }
+      
+      .control-wrapper:nth-child(4) .tooltip {
+        transform: translateX(-70%);
+      }
+      
+      .dropdown-menu {
+        position: absolute;
+        top: 25px;
+        right: -80px;
+        background-color: var(--sidebar-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        width: 200px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        display: none;
+      }
+      
+      .dropdown-menu.active {
+        display: block;
+      }
+      
+      .dropdown-divider {
+        height: 1px;
+        background-color: var(--border-color);
+        margin: 4px 0;
+      }
+      
+      .dropdown-item {
+        padding: 10px 15px;
+        font-size: 14px;
+        color: var(--text-color);
+        cursor: pointer;
+      }
+      
+      .dropdown-item:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+      
+      .history-button {
+        margin-right: 8px;
+        cursor: pointer;
+        width: 28px;
+        height: 28px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-muted);
+        background: none;
+        border: none;
+      }
+      
+      .history-button:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        color: var(--text-color);
+      }
+      
+      .history-panel {
+        position: absolute;
+        top: 25px;
+        right: -120px;
+        background-color: var(--sidebar-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        width: 300px;
+        max-height: 400px;
+        overflow-y: auto;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        display: none;
+      }
+      
+      .history-panel.active {
+        display: block;
+      }
+      
+      .history-item {
+        padding: 10px 15px;
+        font-size: 14px;
+        color: var(--text-color);
+        cursor: pointer;
+        border-bottom: 1px solid var(--border-color);
+      }
+      
+      .history-item:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+      
+      .history-date {
+        color: var(--text-muted);
+        font-size: 12px;
+        margin-top: 4px;
       }
 
       .chatbot-content {
@@ -443,12 +604,12 @@
             <span>Scheduling</span>
             <span class="sidebar-icon">👁️</span>
           </div>
-          <div class="user-email">ithegreenguy@gmail.com</div>
+          <div class="user-email">email@email.com</div>
           <div class="add-account">
             <span class="sidebar-icon">+</span>
             <span>Add calendar account</span>
           </div>
-          <div class="workspace-name">Ethan Pae's Notion</div>
+          <div class="workspace-name">Your Calendar Account</div>
         </div>
         <div class="sidebar-footer">
           <div class="sidebar-icon">🗒️</div>
@@ -633,40 +794,54 @@
         <div class="chatbot-header">
           <div class="chatbot-title">Building an AI-Integrated Calendar App</div>
           <div class="chatbot-controls">
-            <button type="button" class="chatbot-control-btn">+</button>
-            <button type="button" class="chatbot-control-btn">⋯</button>
-            <button type="button" class="chatbot-control-btn">×</button>
+            <div class="control-wrapper">
+              <button type="button" class="chatbot-control-btn new-btn" aria-label="New tab">+</button>
+              <span class="tooltip">New tab</span>
+            </div>
+            <div class="control-wrapper">
+              <button type="button" class="history-button" aria-label="Chat history">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 8V12L14.5 14.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M12 21C16.9706 21 21 16.9706 21 12C21 7.02944 16.9706 3 12 3C7.02944 3 3 7.02944 3 12C3 16.9706 7.02944 21 12 21Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+              <span class="tooltip">Chat history</span>
+            </div>
+            <div class="control-wrapper">
+              <button type="button" class="chatbot-control-btn more-btn" aria-label="More actions">⋯</button>
+              <span class="tooltip">More actions</span>
+              <div class="dropdown-menu">
+                <div class="dropdown-item" id="copy-id">Copy Request ID</div>
+                <div class="dropdown-item" id="report-feedback">Report Feedback</div>
+                <div class="dropdown-item" id="open-editor">Open as Editor</div>
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-item" id="close-all">Close All Chats</div>
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-item" id="chat-settings">Chat Settings</div>
+              </div>
+            </div>
+            <div class="control-wrapper">
+              <button type="button" class="chatbot-control-btn close-btn" aria-label="Close sidebar">×</button>
+              <span class="tooltip">Close sidebar</span>
+            </div>
+          </div>
+          <div class="history-panel">
+            <div class="history-item">
+              Calendar app creation
+              <div class="history-date">Today, 3:45 PM</div>
+            </div>
+            <div class="history-item">
+              Adding events to calendar
+              <div class="history-date">Yesterday, 2:30 PM</div>
+            </div>
+            <div class="history-item">
+              Weather integration ideas
+              <div class="history-date">May 10, 10:15 AM</div>
+            </div>
           </div>
         </div>
         <div class="chatbot-content">
-          <div>
-            <div class="generating-line">
-              <div class="caret-icon">›</div>
-              <span>Generating...</span>
-            </div>
-            <div class="action-buttons">
-              <button type="button" class="btn">Stop</button>
-              <button type="button" class="btn">Accept all ⌘⇧↵</button>
-            </div>
-          </div>
-          <div class="context-box">
-            <div class="context-header">
-              <div class="context-icon">+</div>
-              <span>Add context</span>
-            </div>
-            <div class="context-input">
-              Plan, search, build anything
-            </div>
-          </div>
-          <div class="agent-bar">
-            <span class="agent-icon">∞</span>
-            <div class="agent-name">Agent #1</div>
-            <div class="agent-model">
-              <span>claude-3.7-sonnet</span>
-              <div class="tool-icon">🖼️</div>
-              <div class="tool-icon">📄</div>
-            </div>
-          </div>
+
         </div>
         <div class="chatbot-footer">
           <div class="chat-input">
@@ -700,6 +875,157 @@
             this.value = '';
           }
         }
+      });
+      
+      // Handle AI sidebar buttons
+      document.addEventListener('DOMContentLoaded', function() {
+        // More actions dropdown
+        const moreBtn = document.querySelector('.more-btn');
+        const dropdown = document.querySelector('.dropdown-menu');
+        
+        moreBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          const isActive = dropdown.classList.contains('active');
+          
+          // Reset all active states
+          document.querySelectorAll('.chatbot-control-btn, .history-button').forEach(btn => {
+            btn.classList.remove('active');
+          });
+          
+          // Toggle dropdown
+          dropdown.classList.toggle('active');
+          
+          // Toggle active state on button
+          if (!isActive) {
+            moreBtn.classList.add('active');
+          }
+        });
+        
+        // History button
+        const historyBtn = document.querySelector('.history-button');
+        const historyPanel = document.querySelector('.history-panel');
+        
+        historyBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          const isActive = historyPanel.classList.contains('active');
+          
+          // Reset all active states
+          document.querySelectorAll('.chatbot-control-btn, .history-button').forEach(btn => {
+            btn.classList.remove('active');
+          });
+          
+          // Hide dropdown menu
+          dropdown.classList.remove('active');
+          
+          // Toggle history panel
+          historyPanel.classList.toggle('active');
+          
+          // Toggle active state on button
+          if (!isActive) {
+            historyBtn.classList.add('active');
+          }
+        });
+        
+        // Hide all dropdowns and active states when clicking elsewhere
+        document.addEventListener('click', function() {
+          dropdown.classList.remove('active');
+          historyPanel.classList.remove('active');
+          
+          document.querySelectorAll('.chatbot-control-btn, .history-button').forEach(btn => {
+            btn.classList.remove('active');
+          });
+        });
+        
+        // Prevent clicks inside dropdown from closing it
+        dropdown.addEventListener('click', function(e) {
+          e.stopPropagation();
+        });
+        
+        // Prevent clicks inside history panel from closing it
+        historyPanel.addEventListener('click', function(e) {
+          e.stopPropagation();
+        });
+        
+        // Handle tab title click (make it a tab button)
+        const chatbotTitle = document.querySelector('.chatbot-title');
+        chatbotTitle.addEventListener('click', function() {
+          alert('Switch to this tab');
+        });
+        
+        // New tab button
+        const newBtn = document.querySelector('.new-btn');
+        newBtn.addEventListener('click', function() {
+          alert('Open new chat tab');
+        });
+        
+        // Close sidebar button
+        const closeBtn = document.querySelector('.close-btn');
+        closeBtn.addEventListener('click', function() {
+          const sidebar = document.querySelector('.chatbot-sidebar');
+          sidebar.style.display = 'none';
+        });
+        
+        // Dropdown menu items
+        document.getElementById('copy-id').addEventListener('click', function() {
+          alert('Request ID copied to clipboard');
+          dropdown.classList.remove('active');
+        });
+        
+        document.getElementById('report-feedback').addEventListener('click', function() {
+          alert('Report feedback dialog would open');
+          dropdown.classList.remove('active');
+        });
+        
+        document.getElementById('open-editor').addEventListener('click', function() {
+          alert('Opening as editor');
+          dropdown.classList.remove('active');
+        });
+        
+        document.getElementById('close-all').addEventListener('click', function() {
+          alert('All chats closed');
+          dropdown.classList.remove('active');
+        });
+        
+        document.getElementById('chat-settings').addEventListener('click', function() {
+          alert('Chat settings dialog would open');
+          dropdown.classList.remove('active');
+        });
+        
+        // History items
+        const historyItems = document.querySelectorAll('.history-item');
+        historyItems.forEach(function(item) {
+          item.addEventListener('click', function() {
+            alert('Loading chat: ' + this.textContent.trim().split('\n')[0]);
+            historyPanel.classList.remove('active');
+          });
+        });
+        
+        // Add button for reopening sidebar if closed
+        const mainContent = document.querySelector('.main-content');
+        closeBtn.addEventListener('click', function() {
+          const sidebar = document.querySelector('.chatbot-sidebar');
+          sidebar.style.display = 'none';
+          
+          const reopenBtn = document.createElement('button');
+          reopenBtn.className = 'reopen-sidebar-btn';
+          reopenBtn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M19 3H5C3.89 3 3 3.9 3 5V19C3 20.1 3.89 21 5 21H19C20.11 21 21 20.1 21 19V5C21 3.9 20.11 3 19 3ZM10 17L5 12L10 7V17ZM14 17L19 12L14 7V17Z" fill="currentColor"/></svg>';
+          reopenBtn.style.position = 'fixed';
+          reopenBtn.style.top = '10px';
+          reopenBtn.style.right = '10px';
+          reopenBtn.style.zIndex = '100';
+          reopenBtn.style.backgroundColor = 'var(--sidebar-bg)';
+          reopenBtn.style.border = '1px solid var(--border-color)';
+          reopenBtn.style.borderRadius = '4px';
+          reopenBtn.style.padding = '5px';
+          reopenBtn.style.cursor = 'pointer';
+          
+          document.body.appendChild(reopenBtn);
+          
+          reopenBtn.addEventListener('click', function() {
+            sidebar.style.display = 'flex';
+            document.body.removeChild(reopenBtn);
+          });
+        });
       });
     </script>
   </body>
