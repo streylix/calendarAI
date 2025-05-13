@@ -680,6 +680,7 @@
       </div>
     </div>
 
+    <script src="main/script.js"></script>
     <script>
       // Handle adding events from AI prompts
       document.querySelector('.chatbot-footer .chat-input input').addEventListener('keydown', function(event) {
@@ -699,18 +700,6 @@
             this.value = '';
           }
         }
-      });
-
-      // Handle date navigation
-      document.querySelector('.today-btn').addEventListener('click', function() {
-        alert('Navigate to today');
-      });
-
-      // Handle next/previous month
-      document.querySelectorAll('.icon-btn').forEach((btn, index) => {
-        btn.addEventListener('click', function() {
-          alert(index === 0 ? 'Previous month' : 'Next month');
-        });
       });
     </script>
   </body>
