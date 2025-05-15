@@ -1,46 +1,20 @@
 {
-  "name": "ai-calendar",
+  "name": "simple-calendar-app",
   "version": "1.0.0",
-  "description": "AI-powered desktop calendar application",
-  "main": "main/main.js",
+  "description": "Simple AI calendar app",
+  "main": "main/index.js",
   "scripts": {
-    "start": "cross-env ELECTRON_START_URL=http://localhost:3000 electron .",
-    "dev": "cross-env NODE_ENV=development concurrently \"npm run react-start\" \"wait-on http://localhost:3000 && npm run start\"",
-    "react-start": "react-scripts start",
-    "build": "react-scripts build",
-    "electron": "electron ."
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["calendar", "ai", "electron", "react"],
+  "keywords": [
+    "calendar",
+    "electron",
+    "ai"
+  ],
   "author": "",
   "license": "ISC",
-  "dependencies": {
-    "@headlessui/react": "^2.2.2",
-    "@heroicons/react": "^2.2.0",
-    "date-fns": "^4.1.0",
-    "openai": "^4.98.0",
-    "react": "^19.1.0",
-    "react-big-calendar": "^1.18.0",
-    "react-dom": "^19.1.0",
-    "tailwindcss": "^4.1.6"
-  },
   "devDependencies": {
-    "electron": "^36.2.0",
-    "electron-builder": "^26.0.12",
-    "concurrently": "^9.1.2",
-    "cross-env": "^7.0.3",
-    "wait-on": "^8.0.3",
-    "react-scripts": "^5.0.1"
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
+    "electron": "^36.2.0"
   }
-} 
+}

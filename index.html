@@ -2,88 +2,1580 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <title>AI Calendar App</title>
+    <title>AI-Integrated Calendar App</title>
     <style>
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      :root {
+        --bg-color: #1e1e1e;
+        --sidebar-bg: #262626;
+        --border-color: #444;
+        --text-color: #e1e1e1;
+        --text-muted: #888;
+        --highlight-color: #ff5722;
+        --toolbar-bg: #2c2c2c;
+        --card-bg: #303030;
+        --green-event: rgba(46, 125, 50, 0.8);
+        --blue-event: rgba(33, 150, 243, 0.8);
+        --current-day-bg: #404040;
+        --chatbot-bg: #262626;
+        --chatbot-border: #333;
+        --button-primary: #4a4a4a;
+        --button-secondary: transparent;
+      }
+
+      * {
         margin: 0;
-        padding: 20px;
-        background-color: #f5f5f5;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       }
-      
-      h1 {
-        color: #2c3e50;
-        margin-bottom: 20px;
+
+      body {
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        height: 100vh;
+        overflow: hidden;
       }
-      
-      .container {
-        max-width: 800px;
-        margin: 0 auto;
-        background-color: white;
-        padding: 20px;
-        border-radius: 8px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-      }
-      
-      .calendar {
-        border: 1px solid #ddd;
-        border-radius: 5px;
-        padding: 10px;
-        margin-bottom: 20px;
-        min-height: 300px;
-      }
-      
-      .ai-input {
+
+      /* App container */
+      .app-container {
         display: flex;
-        margin-top: 20px;
+        width: 100%;
+        height: 100vh;
+        position: relative;
+      }
+
+      /* Sidebar */
+      .sidebar {
+        width: 300px;
+        background-color: var(--sidebar-bg);
+        border-right: 1px solid var(--border-color);
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        padding: 16px;
+        position: relative;
+        transition: width 0.1s ease;
+        min-width: 280px;
+        max-width: 600px;
+      }
+
+      /* Resize handle for the sidebar */
+      .sidebar-resize-handle {
+        position: absolute;
+        top: 0;
+        right: -4px;
+        width: 8px;
+        height: 100%;
+        cursor: ew-resize;
+        z-index: 100;
       }
       
-      .ai-input input {
+      .sidebar-resize-handle:hover,
+      .sidebar-resize-handle.active {
+        background-color: var(--highlight-color);
+        opacity: 0.3;
+      }
+      
+      /* When resizing is in progress */
+      .sidebar-resizing {
+        user-select: none;
+        cursor: ew-resize;
+      }
+
+      .sidebar-top {
         flex: 1;
+      }
+
+      .sidebar-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        cursor: pointer;
+      }
+
+      .sidebar-footer {
+        padding-top: 20px;
+        border-top: 1px solid var(--border-color);
+      }
+
+      .sidebar-icon {
+        width: 24px;
+        height: 24px;
+        margin-right: 8px;
+        opacity: 0.7;
+      }
+
+      .user-email {
+        color: var(--text-muted);
+        font-size: 14px;
+        margin: 10px 0;
+      }
+
+      .add-account {
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        padding: 8px 0;
+        cursor: pointer;
+      }
+
+      .add-account:hover {
+        color: var(--text-color);
+      }
+
+      .workspace-name {
+        margin: 20px 0 10px;
+        font-weight: 500;
+      }
+
+      /* Main content */
+      .main-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        position: relative;
+      }
+
+      /* Toolbar */
+      .toolbar {
+        display: flex;
+        padding: 12px 20px;
+        background-color: var(--toolbar-bg);
+        align-items: center;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .view-dropdown, .today-btn {
+        background-color: #3d3d3d;
+        color: var(--text-color);
+        border: none;
+        padding: 6px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+      }
+
+      .month-header {
+        margin-left: 20px;
+        font-size: 24px;
+        font-weight: 500;
+      }
+
+      /* Month name & icons */
+      .month-year {
+        display: flex;
+        align-items: center;
+      }
+
+      .nav-icons {
+        display: flex;
+        margin-left: auto;
+      }
+
+      .icon-btn {
+        background: none;
+        border: none;
+        color: var(--text-color);
+        font-size: 18px;
+        cursor: pointer;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        margin-left: 8px;
+      }
+
+      .icon-btn:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+
+      /* Calendar */
+      .calendar-container {
+        flex: 1;
+        overflow: auto;
         padding: 10px;
-        border: 1px solid #ddd;
-        border-radius: 4px 0 0 4px;
-        font-size: 16px;
+      }
+
+      .calendar {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        grid-auto-rows: minmax(100px, 1fr);
+        gap: 1px;
+        height: calc(100% - 30px);
+      }
+
+      .calendar-header {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        text-align: center;
+        font-weight: 500;
+        padding-bottom: 10px;
+      }
+
+      .calendar-cell {
+        border: 1px solid var(--border-color);
+        padding: 8px;
+        position: relative;
+        background-color: var(--card-bg);
+      }
+
+      .date-number {
+        font-size: 14px;
+        opacity: 0.7;
+        margin-bottom: 8px;
+      }
+
+      .current-day {
+        background-color: var(--current-day-bg);
+      }
+
+      .current-day .date-number {
+        color: white;
+        font-weight: bold;
+        opacity: 1;
+        background-color: var(--highlight-color);
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+      }
+
+      .calendar-event {
+        padding: 2px 6px;
+        margin-bottom: 4px;
+        border-radius: 3px;
+        font-size: 12px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        cursor: pointer;
+        position: relative;
       }
       
-      .ai-input button {
-        padding: 10px 20px;
-        background-color: #3498db;
-        color: white;
+      /* Event resize handles */
+      .event-resize-handle-top,
+      .event-resize-handle-bottom {
+        position: absolute;
+        left: 0;
+        height: 6px;
+        width: 100%;
+        background-color: transparent;
+        cursor: ns-resize;
+        z-index: 10;
+      }
+      
+      .event-resize-handle-top {
+        top: 0;
+      }
+      
+      .event-resize-handle-bottom {
+        bottom: 0;
+      }
+      
+      /* Show a visual indicator on hover */
+      .calendar-event:hover .event-resize-handle-top:before,
+      .calendar-event:hover .event-resize-handle-bottom:before {
+        content: '';
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 24px;
+        height: 3px;
+        background-color: rgba(255,255,255,0.7);
+        border-radius: 2px;
+      }
+      
+      .calendar-event:hover .event-resize-handle-top:before {
+        top: 1px;
+      }
+      
+      .calendar-event:hover .event-resize-handle-bottom:before {
+        bottom: 1px;
+      }
+      
+      .hour-cell .calendar-event {
+        position: absolute;
+        left: 0;
+        width: 100%;
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      
+      .calendar-event.dragging {
+        opacity: 0.7;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+      }
+      
+      .calendar-event.resizing {
+        opacity: 0.8;
+        z-index: 1000;
+      }
+      
+      .drag-event-indicator, .drag-event-selection {
+        position: absolute;
+        background-color: rgba(66, 133, 244, 0.3);
+        border: 1px solid rgba(66, 133, 244, 0.8);
+        z-index: 100;
+        pointer-events: none;
+      }
+      
+      .preview-event {
+        position: absolute;
+        z-index: 101;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        transition: opacity 0.3s ease;
+      }
+      
+      .green-event {
+        background-color: var(--green-event);
+      }
+
+      .blue-event {
+        background-color: var(--blue-event);
+      }
+
+      .other-month {
+        opacity: 0.5;
+      }
+
+      /* Chatbot sidebar */
+      .chatbot-sidebar {
+        width: 380px;
+        background-color: var(--chatbot-bg);
+        border-left: 1px solid var(--chatbot-border);
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+      }
+
+      .chatbot-header {
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .chatbot-title {
+        font-size: 14px;
+        font-weight: 500;
+        padding: 5px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        max-width: 240px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex: 1;
+      }
+      
+      .chatbot-title:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+
+      .chatbot-controls {
+        display: flex;
+        align-items: center;
+        gap: 1px;
+        margin-left: auto;
+      }
+
+      .control-wrapper {
+        position: relative;
+        display: inline-block;
+        margin-left: -1px;
+      }
+
+      .chatbot-control-btn, .history-button {
+        background: none;
         border: none;
-        border-radius: 0 4px 4px 0;
+        color: var(--text-muted);
         cursor: pointer;
         font-size: 16px;
+        width: 22px;
+        height: 22px;
+        border-radius: 3px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        padding: 0;
       }
       
-      .ai-input button:hover {
-        background-color: #2980b9;
+      .chatbot-control-btn:hover, .history-button:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        color: var(--text-color);
+      }
+      
+      /* Active state for buttons */
+      .chatbot-control-btn.active, .history-button.active {
+        background-color: rgba(255, 255, 255, 0.15);
+        color: var(--text-color);
+      }
+      
+      .tooltip {
+        position: absolute;
+        bottom: -30px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #333;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        white-space: nowrap;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s, visibility 0.2s;
+        z-index: 1000;
+        pointer-events: none;
+      }
+      
+      .control-wrapper:hover .tooltip {
+        opacity: 1;
+        visibility: visible;
+      }
+      
+      /* Prevent tooltip overlap */
+      .control-wrapper:nth-child(1) .tooltip {
+        transform: translateX(-30%);
+      }
+      
+      .control-wrapper:nth-child(4) .tooltip {
+        transform: translateX(-70%);
+      }
+      
+      .dropdown-menu {
+        position: absolute;
+        top: 25px;
+        right: -80px;
+        background-color: var(--sidebar-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        width: 200px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        display: none;
+      }
+      
+      .dropdown-menu.active {
+        display: block;
+      }
+      
+      .dropdown-divider {
+        height: 1px;
+        background-color: var(--border-color);
+        margin: 4px 0;
+      }
+      
+      .dropdown-item {
+        padding: 10px 15px;
+        font-size: 14px;
+        color: var(--text-color);
+        cursor: pointer;
+      }
+      
+      .dropdown-item:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+      
+      .history-button {
+        margin-right: 8px;
+        cursor: pointer;
+        width: 28px;
+        height: 28px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-muted);
+        background: none;
+        border: none;
+      }
+      
+      .history-button:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        color: var(--text-color);
+      }
+      
+      .history-panel {
+        position: absolute;
+        top: 25px;
+        right: -120px;
+        background-color: var(--sidebar-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        width: 300px;
+        max-height: 400px;
+        overflow-y: auto;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        display: none;
+      }
+      
+      .history-panel.active {
+        display: block;
+      }
+      
+      .history-item {
+        padding: 10px 15px;
+        font-size: 14px;
+        color: var(--text-color);
+        cursor: pointer;
+        border-bottom: 1px solid var(--border-color);
+      }
+      
+      .history-item:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+      
+      .history-date {
+        color: var(--text-muted);
+        font-size: 12px;
+        margin-top: 4px;
+      }
+
+      .chatbot-content {
+        flex: 1;
+        padding: 16px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .generating-line {
+        display: flex;
+        align-items: center;
+        color: var(--text-muted);
+        font-size: 14px;
+        padding: 4px 8px;
+      }
+
+      .caret-icon {
+        margin-right: 8px;
+        opacity: 0.6;
+      }
+
+      .action-buttons {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      .btn {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        background-color: #333;
+        color: var(--text-muted);
+        border: 1px solid var(--border-color);
+        cursor: pointer;
+      }
+
+      /* Context box */
+      .context-box {
+        border-radius: 6px;
+        overflow: hidden;
+        border: 1px solid var(--border-color);
+      }
+
+      .context-header {
+        padding: 8px 12px;
+        display: flex;
+        align-items: center;
+        font-size: 13px;
+        color: var(--text-muted);
+      }
+
+      .context-icon {
+        width: 16px;
+        height: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--text-muted);
+        border-radius: 50%;
+        margin-right: 8px;
+        font-size: 14px;
+      }
+
+      .context-input {
+        padding: 8px 12px;
+        color: var(--text-muted);
+        font-size: 14px;
+        border-top: 1px solid var(--border-color);
+      }
+
+      /* Agent info */
+      .agent-bar {
+        display: flex;
+        align-items: center;
+        padding: 8px 12px;
+        background-color: rgba(0, 0, 0, 0.2);
+        border-radius: 6px;
+      }
+
+      .agent-icon {
+        opacity: 0.5;
+        margin-right: 6px;
+        font-size: 14px;
+      }
+
+      .agent-name {
+        display: flex;
+        align-items: center;
+        font-size: 13px;
+        color: var(--text-muted);
+      }
+
+      .agent-number {
+        margin-left: 4px;
+        font-weight: normal;
+      }
+
+      .agent-model {
+        margin-left: auto;
+        font-size: 13px;
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .tool-icon {
+        width: 20px;
+        height: 20px;
+        opacity: 0.6;
+      }
+
+      /* Chat footer */
+      .chatbot-footer {
+        padding: 16px;
+        border-top: 1px solid var(--border-color);
+      }
+
+      .chat-input {
+        display: flex;
+        background-color: rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid var(--border-color);
+        height: 40px;
+      }
+
+      .chat-input input {
+        flex: 1;
+        padding: 0 16px;
+        background: transparent;
+        border: none;
+        color: var(--text-color);
+        font-size: 14px;
+      }
+
+      .chat-input input:focus {
+        outline: none;
+      }
+
+      .chat-hint {
+        color: var(--text-muted);
+        font-size: 13px;
+        display: flex;
+        justify-content: space-between;
+        margin-top: 12px;
+      }
+
+      .new-chat {
+        cursor: pointer;
+      }
+      
+      /* Event creation styles */
+      .calendar-cell {
+        cursor: pointer;
+      }
+      
+      .dragging-event {
+        background-color: rgba(33, 150, 243, 0.4);
+        position: absolute;
+        border: 1px dashed rgba(33, 150, 243, 0.8);
+        border-radius: 3px;
+        z-index: 10;
+        pointer-events: none;
+      }
+      
+      /* Event form styles */
+      .create-event-sidebar {
+        width: 100%;
+        height: 100%;
+        background-color: var(--sidebar-bg);
+        position: absolute;
+        top: 0;
+        left: 0;
+        display: none;
+        flex-direction: column;
+        z-index: 100;
+        overflow-y: auto;
+      }
+      
+      .create-event-sidebar.active {
+        display: flex;
+      }
+      
+      .event-form-header {
+        display: flex;
+        align-items: center;
+        padding: 16px;
+        border-bottom: 1px solid var(--border-color);
+      }
+      
+      .back-btn {
+        background: none;
+        border: none;
+        color: var(--text-color);
+        font-size: 18px;
+        cursor: pointer;
+        margin-right: 12px;
+      }
+      
+      .event-form-title {
+        font-size: 18px;
+        font-weight: 500;
+      }
+      
+      .event-form-content {
+        padding: 16px;
+        flex: 1;
+        overflow: auto;
+      }
+      
+      .event-form-field {
+        margin-bottom: 20px;
+      }
+      
+      .event-form-label {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 14px;
+        color: var(--text-muted);
+      }
+      
+      .event-form-input {
+        width: 100%;
+        padding: 8px 10px;
+        background-color: rgba(0, 0, 0, 0.2);
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        color: var(--text-color);
+        font-size: 14px;
+      }
+      
+      .event-form-input:focus {
+        outline: none;
+        border-color: var(--highlight-color);
+      }
+      
+      .event-datetime {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      
+      .datetime-field {
+        flex: 1;
+      }
+      
+      .event-form-select {
+        width: 100%;
+        padding: 8px 10px;
+        background-color: rgba(0, 0, 0, 0.2);
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        color: var(--text-color);
+        font-size: 14px;
+        appearance: none;
+        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right 8px center;
+        background-size: 16px;
+      }
+      
+      .event-form-checkbox {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      
+      .event-form-checkbox input[type="checkbox"] {
+        margin-right: 8px;
+      }
+      
+      .color-options {
+        display: flex;
+        gap: 10px;
+        margin-top: 8px;
+      }
+      
+      .color-option {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        cursor: pointer;
+        border: 2px solid transparent;
+      }
+      
+      .color-option.selected {
+        border-color: white;
+      }
+      
+      .color-blue {
+        background-color: var(--blue-event);
+      }
+      
+      .color-green {
+        background-color: var(--green-event);
+      }
+      
+      .color-purple {
+        background-color: rgba(156, 39, 176, 0.8);
+      }
+      
+      .color-red {
+        background-color: rgba(229, 57, 53, 0.8);
+      }
+      
+      .repeat-options {
+        display: none;
+        margin-top: 8px;
+      }
+      
+      .repeat-options.active {
+        display: block;
+      }
+      
+      .event-form-footer {
+        display: none;
+      }
+      
+      /* Week/day view event creation */
+      .hour-cell {
+        cursor: pointer;
+      }
+
+      /* Media query to handle responsive layout */
+      @media (min-width: 350px) {
+        .event-datetime {
+          flex-direction: row;
+        }
+      }
+
+      /* Event Form Buttons */
+      .event-form-btn {
+        padding: 10px 15px;
+        border-radius: 4px;
+        border: none;
+        font-size: 14px;
+        cursor: pointer;
+      }
+      
+      .delete-btn {
+        background-color: #f44336;
+        color: white;
+        margin-right: auto;
+      }
+      
+      .cancel-btn {
+        background-color: transparent;
+        border: 1px solid var(--border-color);
+        color: var(--text-color);
+      }
+      
+      .save-btn {
+        background-color: var(--highlight-color);
+        color: white;
       }
     </style>
   </head>
   <body>
-    <div class="container">
-      <h1>AI Calendar</h1>
-      <div class="calendar" id="calendar">
-        <p>Calendar will be displayed here.</p>
+    <div class="app-container">
+      <!-- Left Sidebar -->
+      <div class="sidebar">
+        <div class="sidebar-resize-handle"></div>
+        <div class="sidebar-top">
+          <div class="sidebar-heading">
+            <span>Scheduling</span>
+            <span class="sidebar-icon">👁️</span>
+          </div>
+          <div class="user-email">email@email.com</div>
+          <div class="add-account">
+            <span class="sidebar-icon">+</span>
+            <span>Add calendar account</span>
+          </div>
+          <div class="workspace-name">Your Calendar Account</div>
+        </div>
+        <div class="sidebar-footer">
+          <div class="sidebar-icon">🗒️</div>
+        </div>
+        <!-- Create Event Form -->
+        <div class="create-event-sidebar">
+          <div class="event-form-header">
+            <button type="button" class="back-btn">←</button>
+            <div class="event-form-title">Create event</div>
+          </div>
+          <div class="event-form-content">
+            <div class="event-form-field">
+              <input type="text" class="event-form-input" id="event-title" placeholder="Add title">
+            </div>
+            <div class="event-form-field event-datetime">
+              <div class="datetime-field">
+                <label class="event-form-label">Start date</label>
+                <input type="date" class="event-form-input" id="event-start-date">
+              </div>
+              <div class="datetime-field">
+                <label class="event-form-label">Start time</label>
+                <input type="time" class="event-form-input" id="event-start-time">
+              </div>
+            </div>
+            <div class="event-form-field event-datetime">
+              <div class="datetime-field">
+                <label class="event-form-label">End date</label>
+                <input type="date" class="event-form-input" id="event-end-date">
+              </div>
+              <div class="datetime-field">
+                <label class="event-form-label">End time</label>
+                <input type="time" class="event-form-input" id="event-end-time">
+              </div>
+            </div>
+            <div class="event-form-field">
+              <div class="event-form-checkbox">
+                <input type="checkbox" id="all-day">
+                <label for="all-day">All day</label>
+              </div>
+            </div>
+            <div class="event-form-field">
+              <label class="event-form-label">Location</label>
+              <input type="text" class="event-form-input" id="event-location" placeholder="Add location">
+            </div>
+            <div class="event-form-field">
+              <label class="event-form-label">Description</label>
+              <textarea class="event-form-input" id="event-description" rows="3" placeholder="Add description"></textarea>
+            </div>
+            <div class="event-form-field">
+              <label class="event-form-label">Color</label>
+              <div class="color-options">
+                <div class="color-option color-blue selected" data-color="blue"></div>
+                <div class="color-option color-green" data-color="green"></div>
+                <div class="color-option color-purple" data-color="purple"></div>
+                <div class="color-option color-red" data-color="red"></div>
+              </div>
+            </div>
+            <div class="event-form-field">
+              <div class="event-form-checkbox">
+                <input type="checkbox" id="repeat-event">
+                <label for="repeat-event">Repeat</label>
+              </div>
+              <div class="repeat-options">
+                <select class="event-form-select" id="repeat-frequency">
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+              </div>
+            </div>
+            <div class="event-form-field">
+              <label class="event-form-label">Notification</label>
+              <select class="event-form-select" id="notification-time">
+                <option value="none">None</option>
+                <option value="10-min">10 minutes before</option>
+                <option value="30-min">30 minutes before</option>
+                <option value="1-hour">1 hour before</option>
+                <option value="1-day">1 day before</option>
+              </select>
+            </div>
+          </div>
+          <div class="event-form-footer">
+            <button type="button" class="event-form-btn delete-btn">Delete</button>
+            <button type="button" class="event-form-btn cancel-btn">Cancel</button>
+            <button type="button" class="event-form-btn save-btn">Save</button>
+          </div>
+        </div>
       </div>
-      <div class="ai-input">
-        <input type="text" id="ai-prompt" placeholder="Add a calendar event...">
-        <button id="submit-prompt" type="button">Add</button>
+
+      <!-- Main Calendar -->
+      <div class="main-content">
+        <div class="toolbar">
+          <button type="button" class="view-dropdown">Month ▾</button>
+          <button type="button" class="today-btn">Today</button>
+          <div class="month-year">
+            <h2 class="month-header">May 2025</h2>
+          </div>
+          <div class="nav-icons">
+            <button type="button" class="icon-btn">←</button>
+            <button type="button" class="icon-btn">→</button>
+          </div>
+        </div>
+
+        <div class="calendar-container">
+          <div class="calendar-header">
+            <div>Sun</div>
+            <div>Mon</div>
+            <div>Tue</div>
+            <div>Wed</div>
+            <div>Thu</div>
+            <div>Fri</div>
+            <div>Sat</div>
+          </div>
+          <div class="calendar">
+            <!-- Week 1 -->
+            <div class="calendar-cell other-month">
+              <div class="date-number">27</div>
+            </div>
+            <div class="calendar-cell other-month">
+              <div class="date-number">28</div>
+            </div>
+            <div class="calendar-cell other-month">
+              <div class="date-number">29</div>
+            </div>
+            <div class="calendar-cell other-month">
+              <div class="date-number">30</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">1</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">2</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">3</div>
+            </div>
+
+            <!-- Week 2 -->
+            <div class="calendar-cell">
+              <div class="date-number">4</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">5</div>
+              <div class="calendar-event green-event">Cinco de Mayo</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">6</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">7</div>
+              <div class="calendar-event blue-event">Clean up house</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">8</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">9</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">10</div>
+            </div>
+
+            <!-- Week 3 -->
+            <div class="calendar-cell">
+              <div class="date-number">11</div>
+              <div class="calendar-event green-event">Mother's Day</div>
+            </div>
+            <div class="calendar-cell current-day">
+              <div class="date-number">12</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">13</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">14</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">15</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">16</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">17</div>
+            </div>
+
+            <!-- Week 4 -->
+            <div class="calendar-cell">
+              <div class="date-number">18</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">19</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">20</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">21</div>
+              <div class="calendar-event blue-event">Clean office</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">22</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">23</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">24</div>
+              <div class="calendar-event blue-event">Mom's birthday</div>
+            </div>
+
+            <!-- Week 5 -->
+            <div class="calendar-cell">
+              <div class="date-number">25</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">26</div>
+              <div class="calendar-event green-event">Memorial Day</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">27</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">28</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">29</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">30</div>
+            </div>
+            <div class="calendar-cell">
+              <div class="date-number">31</div>
+            </div>
+
+            <!-- Week 6 (June) -->
+            <div class="calendar-cell other-month">
+              <div class="date-number">1</div>
+            </div>
+            <div class="calendar-cell other-month">
+              <div class="date-number">2</div>
+            </div>
+            <div class="calendar-cell other-month">
+              <div class="date-number">3</div>
+            </div>
+            <div class="calendar-cell other-month">
+              <div class="date-number">4</div>
+              <div class="calendar-event blue-event">Clean kitchen</div>
+            </div>
+            <div class="calendar-cell other-month">
+              <div class="date-number">5</div>
+            </div>
+            <div class="calendar-cell other-month">
+              <div class="date-number">6</div>
+            </div>
+            <div class="calendar-cell other-month">
+              <div class="date-number">7</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Chatbot Sidebar -->
+      <div class="chatbot-sidebar">
+        <div class="chatbot-header">
+          <div class="chatbot-title">Building an AI-Integrated Calendar App</div>
+          <div class="chatbot-controls">
+            <div class="control-wrapper">
+              <button type="button" class="chatbot-control-btn new-btn" aria-label="New tab">+</button>
+              <span class="tooltip">New tab</span>
+            </div>
+            <div class="control-wrapper">
+              <button type="button" class="history-button" aria-label="Chat history">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 8V12L14.5 14.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M12 21C16.9706 21 21 16.9706 21 12C21 7.02944 16.9706 3 12 3C7.02944 3 3 7.02944 3 12C3 16.9706 7.02944 21 12 21Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+              <span class="tooltip">Chat history</span>
+            </div>
+            <div class="control-wrapper">
+              <button type="button" class="chatbot-control-btn more-btn" aria-label="More actions">⋯</button>
+              <span class="tooltip">More actions</span>
+              <div class="dropdown-menu">
+                <div class="dropdown-item" id="copy-id">Copy Request ID</div>
+                <div class="dropdown-item" id="report-feedback">Report Feedback</div>
+                <div class="dropdown-item" id="open-editor">Open as Editor</div>
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-item" id="close-all">Close All Chats</div>
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-item" id="chat-settings">Chat Settings</div>
+              </div>
+            </div>
+            <div class="control-wrapper">
+              <button type="button" class="chatbot-control-btn close-btn" aria-label="Close sidebar">×</button>
+              <span class="tooltip">Close sidebar</span>
+            </div>
+          </div>
+          <div class="history-panel">
+            <div class="history-item">
+              Calendar app creation
+              <div class="history-date">Today, 3:45 PM</div>
+            </div>
+            <div class="history-item">
+              Adding events to calendar
+              <div class="history-date">Yesterday, 2:30 PM</div>
+            </div>
+            <div class="history-item">
+              Weather integration ideas
+              <div class="history-date">May 10, 10:15 AM</div>
+            </div>
+          </div>
+        </div>
+        <div class="chatbot-content">
+
+        </div>
+        <div class="chatbot-footer">
+          <div class="chat-input">
+            <input type="text" placeholder="Ask about calendar functionality...">
+          </div>
+          <div class="chat-hint">
+            <span>Start a new chat for better results.</span>
+            <span class="new-chat">New chat</span>
+          </div>
+        </div>
       </div>
     </div>
 
+    <script src="main/script.js"></script>
     <script>
-      // Simple script to simulate AI processing
-      document.getElementById('submit-prompt').addEventListener('click', function() {
-        const promptInput = document.getElementById('ai-prompt');
-        const calendarDiv = document.getElementById('calendar');
-        
-        if (promptInput.value.trim() !== '') {
-          // In a real app, this would send the prompt to an AI service
-          calendarDiv.innerHTML += `<p>Event added: ${promptInput.value}</p>`;
-          promptInput.value = '';
+      // Handle adding events from AI prompts
+      document.querySelector('.chatbot-footer .chat-input input').addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+          const promptValue = this.value.trim();
+          if (promptValue) {
+            // Create a new event element
+            const eventElement = document.createElement('div');
+            eventElement.className = 'calendar-event blue-event';
+            eventElement.textContent = promptValue;
+            
+            // Add to today's cell
+            const calendarCell = document.querySelector('.current-day');
+            calendarCell.appendChild(eventElement);
+            
+            // Clear input
+            this.value = '';
+          }
         }
+      });
+      
+      // Handle AI sidebar buttons
+      document.addEventListener('DOMContentLoaded', function() {
+        // More actions dropdown
+        const moreBtn = document.querySelector('.more-btn');
+        const dropdown = document.querySelector('.dropdown-menu');
+        
+        moreBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          const isActive = dropdown.classList.contains('active');
+          
+          // Reset all active states
+          document.querySelectorAll('.chatbot-control-btn, .history-button').forEach(btn => {
+            btn.classList.remove('active');
+          });
+          
+          // Toggle dropdown
+          dropdown.classList.toggle('active');
+          
+          // Toggle active state on button
+          if (!isActive) {
+            moreBtn.classList.add('active');
+          }
+        });
+        
+        // History button
+        const historyBtn = document.querySelector('.history-button');
+        const historyPanel = document.querySelector('.history-panel');
+        
+        historyBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          const isActive = historyPanel.classList.contains('active');
+          
+          // Reset all active states
+          document.querySelectorAll('.chatbot-control-btn, .history-button').forEach(btn => {
+            btn.classList.remove('active');
+          });
+          
+          // Hide dropdown menu
+          dropdown.classList.remove('active');
+          
+          // Toggle history panel
+          historyPanel.classList.toggle('active');
+          
+          // Toggle active state on button
+          if (!isActive) {
+            historyBtn.classList.add('active');
+          }
+        });
+        
+        // Hide all dropdowns and active states when clicking elsewhere
+        document.addEventListener('click', function() {
+          dropdown.classList.remove('active');
+          historyPanel.classList.remove('active');
+          
+          document.querySelectorAll('.chatbot-control-btn, .history-button').forEach(btn => {
+            btn.classList.remove('active');
+          });
+        });
+        
+        // Prevent clicks inside dropdown from closing it
+        dropdown.addEventListener('click', function(e) {
+          e.stopPropagation();
+        });
+        
+        // Prevent clicks inside history panel from closing it
+        historyPanel.addEventListener('click', function(e) {
+          e.stopPropagation();
+        });
+        
+        // Handle tab title click (make it a tab button)
+        const chatbotTitle = document.querySelector('.chatbot-title');
+        chatbotTitle.addEventListener('click', function() {
+          alert('Switch to this tab');
+        });
+        
+        // New tab button
+        const newBtn = document.querySelector('.new-btn');
+        newBtn.addEventListener('click', function() {
+          alert('Open new chat tab');
+        });
+        
+        // Close sidebar button
+        const closeBtn = document.querySelector('.close-btn');
+        closeBtn.addEventListener('click', function() {
+          const sidebar = document.querySelector('.chatbot-sidebar');
+          sidebar.style.display = 'none';
+        });
+        
+        // Dropdown menu items
+        document.getElementById('copy-id').addEventListener('click', function() {
+          alert('Request ID copied to clipboard');
+          dropdown.classList.remove('active');
+        });
+        
+        document.getElementById('report-feedback').addEventListener('click', function() {
+          alert('Report feedback dialog would open');
+          dropdown.classList.remove('active');
+        });
+        
+        document.getElementById('open-editor').addEventListener('click', function() {
+          alert('Opening as editor');
+          dropdown.classList.remove('active');
+        });
+        
+        document.getElementById('close-all').addEventListener('click', function() {
+          alert('All chats closed');
+          dropdown.classList.remove('active');
+        });
+        
+        document.getElementById('chat-settings').addEventListener('click', function() {
+          alert('Chat settings dialog would open');
+          dropdown.classList.remove('active');
+        });
+        
+        // History items
+        const historyItems = document.querySelectorAll('.history-item');
+        historyItems.forEach(function(item) {
+          item.addEventListener('click', function() {
+            alert('Loading chat: ' + this.textContent.trim().split('\n')[0]);
+            historyPanel.classList.remove('active');
+          });
+        });
+        
+        // Add button for reopening sidebar if closed
+        const mainContent = document.querySelector('.main-content');
+        closeBtn.addEventListener('click', function() {
+          const sidebar = document.querySelector('.chatbot-sidebar');
+          sidebar.style.display = 'none';
+          
+          const reopenBtn = document.createElement('button');
+          reopenBtn.className = 'reopen-sidebar-btn';
+          reopenBtn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M19 3H5C3.89 3 3 3.9 3 5V19C3 20.1 3.89 21 5 21H19C20.11 21 21 20.1 21 19V5C21 3.9 20.11 3 19 3ZM10 17L5 12L10 7V17ZM14 17L19 12L14 7V17Z" fill="currentColor"/></svg>';
+          reopenBtn.style.position = 'fixed';
+          reopenBtn.style.top = '10px';
+          reopenBtn.style.right = '10px';
+          reopenBtn.style.zIndex = '100';
+          reopenBtn.style.backgroundColor = 'var(--sidebar-bg)';
+          reopenBtn.style.border = '1px solid var(--border-color)';
+          reopenBtn.style.borderRadius = '4px';
+          reopenBtn.style.padding = '5px';
+          reopenBtn.style.cursor = 'pointer';
+          
+          document.body.appendChild(reopenBtn);
+          
+          reopenBtn.addEventListener('click', function() {
+            sidebar.style.display = 'flex';
+            document.body.removeChild(reopenBtn);
+          });
+        });
+        
+        // Event creation handlers
+        let isMouseDown = false;
+        let startCell = null;
+        let startTime = null;
+        let dragIndicator = null;
+        let eventData = {
+          title: '',
+          startDate: '',
+          startTime: '',
+          endDate: '',
+          endTime: '',
+          allDay: false,
+          location: '',
+          description: '',
+          color: 'blue',
+          repeat: false,
+          repeatFrequency: 'daily',
+          notification: 'none'
+        };
+        
+        // Month view event creation with click and drag
+        const calendarCells = document.querySelectorAll('.calendar-cell');
+        const calendarContainer = document.querySelector('.calendar-container');
+        
+        calendarCells.forEach((cell, index) => {
+          // Handle clicking on existing events for edit
+          const events = cell.querySelectorAll('.calendar-event');
+          events.forEach(event => {
+            event.addEventListener('click', function(e) {
+              // This event handler is overridden by the one set in script.js
+              // The click handler is now managed in the script.js createEvent function
+              e.stopPropagation();
+            });
+          });
+          
+          // Click and drag for event creation
+          cell.addEventListener('mousedown', function(e) {
+            if (e.target.classList.contains('calendar-event') || e.target.classList.contains('date-number')) {
+              return; // Don't start drag when clicking on existing event or date number
+            }
+            
+            isMouseDown = true;
+            startCell = cell;
+            
+            // Create drag indicator
+            dragIndicator = document.createElement('div');
+            dragIndicator.className = 'dragging-event';
+            
+            // Position at the cursor location
+            const cellRect = cell.getBoundingClientRect();
+            const offsetY = e.clientY - cellRect.top;
+            
+            // Start the drag indicator at the cell
+            dragIndicator.style.left = `${cell.offsetLeft}px`;
+            dragIndicator.style.top = `${cell.offsetTop + offsetY}px`;
+            dragIndicator.style.width = `${cell.offsetWidth}px`;
+            dragIndicator.style.height = '20px';
+            
+            calendarContainer.appendChild(dragIndicator);
+            
+            // Prevent text selection during drag
+            e.preventDefault();
+          });
+        });
+        
+        // Move event while dragging
+        document.addEventListener('mousemove', function(e) {
+          if (isMouseDown && dragIndicator) {
+            const calendarRect = calendarContainer.getBoundingClientRect();
+            const mouseY = e.clientY - calendarRect.top + calendarContainer.scrollTop;
+            
+            // Update height of drag indicator
+            const startY = startCell.offsetTop;
+            const currentHeight = mouseY - startY;
+            
+            if (currentHeight > 20) {
+              dragIndicator.style.height = `${currentHeight}px`;
+            }
+          }
+        });
+        
+        // End drag operation and create event
+        document.addEventListener('mouseup', function() {
+          if (isMouseDown && dragIndicator) {
+            isMouseDown = false;
+            
+            // Calculate which cells were selected by the drag
+            const dragRect = dragIndicator.getBoundingClientRect();
+            const endY = dragRect.bottom;
+            
+            // Find the end cell based on the drag position
+            let endCell = startCell;
+            let endCellFound = false;
+            
+            calendarCells.forEach(cell => {
+              const cellRect = cell.getBoundingClientRect();
+              if (cellRect.top <= endY && cellRect.bottom >= endY) {
+                endCell = cell;
+                endCellFound = true;
+              }
+            });
+            
+            // If no end cell found, use the cell at the drag indicator bottom
+            if (!endCellFound) {
+              // Find the closest cell
+              let minDistance = Number.MAX_VALUE;
+              calendarCells.forEach(cell => {
+                const cellRect = cell.getBoundingClientRect();
+                const distance = Math.abs(cellRect.top - endY);
+                if (distance < minDistance) {
+                  minDistance = distance;
+                  endCell = cell;
+                }
+              });
+            }
+            
+            // Get the dates for the drag range
+            const startDay = startCell.querySelector('.date-number').textContent;
+            const endDay = endCell.querySelector('.date-number').textContent;
+            const monthHeader = document.querySelector('.month-header').textContent;
+            const [month, year] = monthHeader.split(' ');
+            
+            const startDate = new Date(`${month} ${startDay}, ${year}`);
+            const endDate = new Date(`${month} ${endDay}, ${year}`);
+            
+            // If start date is after end date, swap them (for upward drags)
+            if (startDate > endDate) {
+              [startDate, endDate] = [endDate, startDate];
+            }
+            
+            // Format dates as YYYY-MM-DD strings for the event creation
+            const formatDateForEvent = (date) => {
+              const year = date.getFullYear();
+              const month = String(date.getMonth() + 1).padStart(2, '0');
+              const day = String(date.getDate()).padStart(2, '0');
+              return `${year}-${month}-${day}`;
+            };
+            
+            // Use the showEventSidebar from script.js instead of openEventForm
+            // This ensures consistent event handling across all views
+            const eventData = {
+              startDate: formatDateForEvent(startDate),
+              endDate: formatDateForEvent(endDate),
+              startHour: 'all-day', // Mark this as an all-day event
+              endHour: 'all-day',
+              allDay: true
+            };
+            
+            // Access the showEventSidebar function from the global scope
+            window.showEventSidebar ? window.showEventSidebar(eventData, false) : null;
+            
+            // Remove drag indicator
+            dragIndicator.remove();
+            dragIndicator = null;
+          }
+        });
       });
     </script>
   </body>
