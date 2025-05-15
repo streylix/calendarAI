@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let showWeekends = true;
   let showDeclinedEvents = true;
   let showWeekNumbers = false;
+  let autoScrollToCurrentTime = false; // New setting to control auto-scrolling
   let isDragging = false;
   let dragStartCell = null;
   let dragEndCell = null;
@@ -254,7 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       html += `
         <div class="day-column-header${isToday ? ' today-column' : ''}">
-          ${dayName} ${dayNumber}${isToday ? ' <span class="today-marker">12</span>' : ''}
+          ${dayName} ${isToday ? `<span class="today-marker">${dayNumber}</span>` : dayNumber}
         </div>
       `;
     });
@@ -339,7 +340,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="day-header">
           <div class="time-column">EDT</div>
           <div class="day-column-header${isToday ? ' today-column' : ''}">
-            ${dayOfWeek} ${dayOfMonth}${isToday ? ' <span class="today-marker">12</span>' : ''}
+            ${dayOfWeek} ${isToday ? `<span class="today-marker">${dayOfMonth}</span>` : dayOfMonth}
           </div>
         </div>
         <div class="day-grid">
@@ -485,6 +486,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // If it's an existing event, select it in the UI
     if (isEdit && eventData.id) {
       selectEvent(eventData.id);
+      console.log('Selected event in sidebar:', eventData.id);
     }
     
     // Clear any previous selection boxes if starting a new edit
@@ -797,20 +799,26 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
         
-        // Auto-save if user clicks away from the form (existing code)
+        // Add blur event listener SEPARATELY (only once) to save when focus leaves the field
         if (!isEdit) {
           newTitleInput.addEventListener('blur', () => {
             if (newTitleInput.value.trim()) {
-              saveEvent();
+              // Only save if we don't already have an event with this ID to prevent duplicates
+              const existingEvent = document.querySelector(`.calendar-event[data-id="${tempEventData.id}"]`);
+              if (!existingEvent) {
+                saveEvent();
+              }
             }
           });
         }
       });
       
-      // Auto-focus the title input
-      setTimeout(() => {
-        newTitleInput.focus();
-      }, 100);
+      // Auto-focus ONLY when creating a new event, not when editing existing ones
+      if (!isEdit) {
+        setTimeout(() => {
+          newTitleInput.focus();
+        }, 100);
+      }
     }
     
     // Handle all-day toggle
@@ -841,12 +849,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update preview if title exists
         const titleInput = eventSidebar.querySelector('#event-title');
         if (titleInput && titleInput.value.trim() && tempEventSelection) {
-          const color = eventSidebar.querySelector('.color-option.selected').dataset.color;
           createPreviewEvent({
             ...tempEventData,
             title: titleInput.value.trim(),
             allDay: allDayClone.checked,
-            color: color
+            color: eventSidebar.querySelector('.color-option.selected').dataset.color
           }, tempEventSelection);
         }
       });
@@ -885,16 +892,43 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!previewEvent) {
       previewEvent = document.createElement('div');
       previewEvent.className = `preview-event calendar-event ${eventData.color || 'blue'}-event`;
-      previewEvent.style.position = 'absolute';
-      previewEvent.style.left = selectionBox.style.left;
-      previewEvent.style.top = selectionBox.style.top;
-      previewEvent.style.width = selectionBox.style.width;
-      previewEvent.style.height = selectionBox.style.height;
-      previewEvent.style.zIndex = '101';
-      previewEvent.style.opacity = '0';
-      previewEvent.style.transition = 'opacity 0.3s ease';
       
-      document.body.appendChild(previewEvent);
+      // Position the preview event relative to the selection box's containing cell
+      // rather than fixed positioning on the page
+      const parentCell = selectionBox.closest('.hour-cell') || selectionBox.closest('.all-day-cell');
+      
+      if (parentCell) {
+        // Position within the cell using relative positioning
+        previewEvent.style.position = 'absolute';
+        previewEvent.style.left = '0';
+        previewEvent.style.top = '0';
+        previewEvent.style.width = '100%';
+        previewEvent.style.height = selectionBox.style.height;
+        previewEvent.style.zIndex = '101';
+        previewEvent.style.opacity = '0';
+        previewEvent.style.transition = 'opacity 0.3s ease';
+        
+        // Add the preview event to the cell, replacing the selection box
+        parentCell.removeChild(selectionBox);
+        parentCell.appendChild(previewEvent);
+        
+        // Store a reference to update the selection box reference
+        tempEventSelection = previewEvent;
+      } else {
+        // Fallback to previous behavior if we can't find a parent cell
+        previewEvent.style.position = 'absolute';
+        previewEvent.style.left = selectionBox.style.left;
+        previewEvent.style.top = selectionBox.style.top;
+        previewEvent.style.width = selectionBox.style.width;
+        previewEvent.style.height = selectionBox.style.height;
+        previewEvent.style.zIndex = '101';
+        previewEvent.style.opacity = '0';
+        previewEvent.style.transition = 'opacity 0.3s ease';
+        
+        // Remove the selection box and add the preview
+        selectionBox.remove();
+        document.body.appendChild(previewEvent);
+      }
       
       // Fade in the preview event
       setTimeout(() => {
@@ -990,6 +1024,32 @@ document.addEventListener('DOMContentLoaded', () => {
       originalEventHeight = rect.height;
       originalEventTop = rect.top;
       
+      // Store original scroll position
+      const scrollContainer = document.querySelector('.day-grid') || 
+                            document.querySelector('.week-grid') || 
+                            document.querySelector('.days-grid');
+      if (scrollContainer) {
+        resizingEvent.dataset.scrollTop = scrollContainer.scrollTop;
+      }
+      
+      // Create a resize indicator to show where the event will be resized to
+      const resizeIndicator = document.createElement('div');
+      resizeIndicator.id = 'resize-indicator';
+      resizeIndicator.className = `resize-indicator ${resizingEvent.dataset.color || 'blue'}-event`;
+      
+      // Position it exactly over the resizing event
+      resizeIndicator.style.position = 'absolute';
+      resizeIndicator.style.top = resizingEvent.style.top;
+      resizeIndicator.style.left = resizingEvent.style.left;
+      resizeIndicator.style.width = getComputedStyle(resizingEvent).width;
+      resizeIndicator.style.height = rect.height + 'px';
+      resizeIndicator.style.opacity = '0.7';
+      resizeIndicator.style.pointerEvents = 'none';
+      resizeIndicator.style.zIndex = '200';
+      
+      // Add to the same parent
+      resizingEvent.parentNode.appendChild(resizeIndicator);
+      
       // Add resizing class
       resizingEvent.classList.add('resizing');
       
@@ -1071,6 +1131,94 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   
+  // Handle event resizing during mouse movement
+  function handleResizing(e) {
+    if (!isResizingEvent || !resizingEvent) return;
+    
+    // Get the resize indicator
+    const resizeIndicator = document.getElementById('resize-indicator');
+    if (!resizeIndicator) return;
+    
+    // Get the parent cell
+    const parentCell = resizingEvent.closest('.hour-cell');
+    if (!parentCell) return;
+    
+    const cellRect = parentCell.getBoundingClientRect();
+    const hourHeight = cellRect.height;
+    const cellTop = cellRect.top;
+    
+    // Get scrolling container
+    const scrollContainer = document.querySelector('.day-grid') || 
+                          document.querySelector('.week-grid') || 
+                          document.querySelector('.days-grid');
+    const scrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
+    const initialScrollTop = resizingEvent.dataset.scrollTop ? parseInt(resizingEvent.dataset.scrollTop) : 0;
+    const scrollDelta = scrollTop - initialScrollTop;
+    
+    if (resizeEdge === 'top') {
+      // Calculate the new top position
+      const originalRect = resizingEvent.getBoundingClientRect();
+      let newTop = e.clientY - cellTop + scrollDelta;
+      
+      // Ensure we don't resize below the minimum duration
+      const originalBottom = parseFloat(resizingEvent.style.top) + originalEventHeight;
+      const maxNewTop = originalBottom - (minimumEventDurationMinutes / 60) * hourHeight;
+      
+      // Snap to 5-minute increments
+      const minuteHeight = hourHeight / 60;
+      newTop = Math.round(newTop / (minuteHeight * 5)) * (minuteHeight * 5);
+      
+      // Apply constraints
+      newTop = Math.max(0, Math.min(newTop, maxNewTop));
+      
+      // Update the indicator
+      const newHeight = originalBottom - newTop;
+      resizeIndicator.style.top = `${newTop}px`;
+      resizeIndicator.style.height = `${newHeight}px`;
+      
+      // Calculate the new time
+      const minutesFromTop = (newTop / hourHeight) * 60;
+      const hourOfCell = parseInt(parentCell.dataset.hour);
+      const newMinute = Math.round(minutesFromTop);
+      const newHour = hourOfCell + Math.floor(newMinute / 60);
+      const adjustedMinute = newMinute % 60;
+      
+      // Store the target values
+      resizingEvent.dataset.targetStartHour = newHour;
+      resizingEvent.dataset.targetStartMinute = adjustedMinute;
+      resizingEvent.dataset.targetStartDate = parentCell.dataset.date;
+    } 
+    else if (resizeEdge === 'bottom') {
+      // Calculate new height
+      const eventTop = parseFloat(resizingEvent.style.top) || 0;
+      const currentBottom = e.clientY - cellTop + scrollDelta;
+      let newHeight = currentBottom - eventTop;
+      
+      // Ensure we don't resize below the minimum duration
+      const minHeight = (minimumEventDurationMinutes / 60) * hourHeight;
+      newHeight = Math.max(minHeight, newHeight);
+      
+      // Snap to 5-minute increments
+      const minuteHeight = hourHeight / 60;
+      newHeight = Math.round(newHeight / (minuteHeight * 5)) * (minuteHeight * 5);
+      
+      // Update the indicator
+      resizeIndicator.style.height = `${newHeight}px`;
+      
+      // Calculate the new end time
+      const minutesFromTop = ((eventTop + newHeight) / hourHeight) * 60;
+      const hourOfCell = parseInt(parentCell.dataset.hour);
+      const totalMinutes = hourOfCell * 60 + minutesFromTop;
+      const newHour = Math.floor(totalMinutes / 60);
+      const newMinute = Math.round(totalMinutes % 60);
+      
+      // Store the target values
+      resizingEvent.dataset.targetEndHour = newHour;
+      resizingEvent.dataset.targetEndMinute = newMinute;
+      resizingEvent.dataset.targetEndDate = parentCell.dataset.date;
+    }
+  }
+  
   // Handle dragging
   function handleDragging(e) {
     // Prevent text selection during drag
@@ -1078,6 +1226,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Set a global flag that we're in drag mode - used by click handlers
     document.body.dataset.inDragOperation = 'true';
+    
+    // Handle event resizing if active
+    if (isResizingEvent) {
+      handleResizing(e);
+      return;
+    }
     
     // If we're potentially dragging but haven't passed the threshold yet, check if we should start
     if (isDragging && !dragIndicator) {
@@ -1095,320 +1249,249 @@ document.addEventListener('DOMContentLoaded', () => {
       dragIndicator = document.createElement('div');
       dragIndicator.className = 'drag-event-indicator';
       
-      // Position at mouse pointer
+      // Position relative to the cell instead of fixed to the viewport
       const rect = dragStartCell.getBoundingClientRect();
+      const calendarRect = calendarContainer.getBoundingClientRect();
+      
+      // Calculate position relative to the calendar container
+      const topRelativeToCalendar = dragStartCell.offsetTop;
+      
       dragIndicator.style.position = 'absolute';
-      dragIndicator.style.left = `${rect.left}px`;
-      dragIndicator.style.top = `${e.clientY}px`;
-      dragIndicator.style.width = `${rect.width}px`;
+      dragIndicator.style.left = '0';
+      dragIndicator.style.top = `${topRelativeToCalendar}px`;
+      dragIndicator.style.width = '100%';
       dragIndicator.style.height = '0px';
       dragIndicator.style.backgroundColor = 'rgba(66, 133, 244, 0.3)';
       dragIndicator.style.border = '1px solid rgba(66, 133, 244, 0.8)';
       dragIndicator.style.pointerEvents = 'none';
       dragIndicator.style.zIndex = '100';
       
-      document.body.appendChild(dragIndicator);
-    }
-    
-    // Handle resizing of events
-    if (isResizingEvent && resizingEvent) {
-      // Reset original event position to prevent temporary movement
-      if (resizingEvent.style.left || resizingEvent.style.top) {
-        resizingEvent.style.left = '';
-        resizingEvent.style.top = '';
-      }
-      
-      const cellRect = resizingEvent.closest('.hour-cell').getBoundingClientRect();
-      const hourHeight = cellRect.height;
-      
-      // Find the cell under the mouse pointer 
-      const elemUnder = document.elementFromPoint(e.clientX, e.clientY);
-      let cellUnder = null;
-      
-      if (elemUnder && elemUnder.classList.contains('hour-cell')) {
-        cellUnder = elemUnder;
-      } else if (elemUnder) {
-        // Try to find the closest hour-cell parent
-        cellUnder = elemUnder.closest('.hour-cell');
-      }
-      
-      if (cellUnder) {
-        const targetCellRect = cellUnder.getBoundingClientRect();
-        
-        // Calculate the relative position within the cell (0-1)
-        const relativePos = (e.clientY - targetCellRect.top) / targetCellRect.height;
-        
-        // Snap to nearest 15-minute interval
-        const snapPoints = [0, 0.25, 0.5, 0.75, 1];
-        const snapIndex = snapPoints.reduce((closest, current, index) => {
-          return Math.abs(current - relativePos) < Math.abs(snapPoints[closest] - relativePos) 
-            ? index 
-            : closest;
-        }, 0);
-        
-        const snappedPos = targetCellRect.top + (snapPoints[snapIndex] * targetCellRect.height);
-        
-        if (resizeEdge === 'top') {
-          // Resize from the top
-          const newTop = snappedPos;
-          const newHeight = (originalEventTop + originalEventHeight) - newTop;
-          
-          // Prevent resizing smaller than minimum duration
-          const hourHeightInMinutes = hourHeight / 60; // pixels per minute
-          const minHeightInPixels = minimumEventDurationMinutes * hourHeightInMinutes;
-          
-          if (newHeight >= minHeightInPixels) {
-            resizingEvent.style.top = `${newTop}px`;
-            resizingEvent.style.height = `${newHeight}px`;
-            
-            // Get the target hour and minutes
-            const targetHour = parseInt(cellUnder.dataset.hour);
-            const targetMinutes = Math.floor(snapPoints[snapIndex] * 60);
-            
-            // Store target time on the element for later use
-            resizingEvent.dataset.targetStartHour = targetHour;
-            resizingEvent.dataset.targetStartMinute = targetMinutes;
-            resizingEvent.dataset.targetStartDate = cellUnder.dataset.date;
-          }
-        } else if (resizeEdge === 'bottom') {
-          // Resize from the bottom
-          const newBottom = snappedPos;
-          const newHeight = newBottom - originalEventTop;
-          
-          // Prevent resizing smaller than minimum duration
-          const hourHeightInMinutes = hourHeight / 60; // pixels per minute
-          const minHeightInPixels = minimumEventDurationMinutes * hourHeightInMinutes;
-          
-          if (newHeight >= minHeightInPixels) {
-            resizingEvent.style.height = `${newHeight}px`;
-            
-            // Get the target hour and minutes
-            const targetHour = parseInt(cellUnder.dataset.hour);
-            const targetMinutes = Math.floor(snapPoints[snapIndex] * 60);
-            
-            // Store target time on the element for later use
-            resizingEvent.dataset.targetEndHour = targetHour;
-            resizingEvent.dataset.targetEndMinute = targetMinutes;
-            resizingEvent.dataset.targetEndDate = cellUnder.dataset.date;
-          }
-        }
-      }
-      
-      return;
-    }
-    
-    // Handle dragging existing events
-    if (isDraggingEvent && draggingEvent) {
-      // Check if we've passed the drag threshold
-      const deltaX = Math.abs(e.clientX - dragStartPosition.x);
-      const deltaY = Math.abs(e.clientY - dragStartPosition.y);
-      
-      // If we haven't passed the threshold, don't start visual dragging yet
-      if (!hasPassedDragThreshold && deltaX < dragThreshold && deltaY < dragThreshold) {
-        return;
-      }
-      
-      // Mark that we've passed the threshold and now fully dragging
-      if (!hasPassedDragThreshold) {
-        hasPassedDragThreshold = true;
-        // Now add the dragging class as we're definitely dragging
-        draggingEvent.classList.add('dragging-origin');
-      }
-      
-      // Find the calendar container boundaries
-      const calendarRect = calendarContainer.getBoundingClientRect();
-      
-      // Find the cell under the mouse pointer
-      let cellUnder = null;
-      const cellCheckX = e.clientX;
-      const cellCheckY = e.clientY;
-      
-      // Get all hour cells and find the one that contains this point
-      const hourCells = document.querySelectorAll('.hour-cell');
-      for (const cell of hourCells) {
-        const cellRect = cell.getBoundingClientRect();
-        // Check if point is inside this cell
-        if (
-          cellCheckX >= cellRect.left && 
-          cellCheckX <= cellRect.right &&
-          cellCheckY >= cellRect.top && 
-          cellCheckY <= cellRect.bottom
-        ) {
-          cellUnder = cell;
-          break;
-        }
-      }
-      
-      // If no hour cell, check if it's over an all-day cell
-      if (!cellUnder) {
-        const allDayCells = document.querySelectorAll('.all-day-cell');
-        for (const cell of allDayCells) {
-          const cellRect = cell.getBoundingClientRect();
-          if (
-            cellCheckX >= cellRect.left && 
-            cellCheckX <= cellRect.right &&
-            cellCheckY >= cellRect.top && 
-            cellCheckY <= cellRect.bottom
-          ) {
-            cellUnder = cell;
-            break;
-          }
-        }
-      }
-      
-      // Create or update the ghost outline element that shows the target position
-      let ghostOutline = document.getElementById('event-ghost-outline');
-      if (!ghostOutline) {
-        ghostOutline = document.createElement('div');
-        ghostOutline.id = 'event-ghost-outline';
-        ghostOutline.className = 'event-ghost-outline';
-        document.body.appendChild(ghostOutline);
-      }
-      
-      // Create cursor indicator element if it doesn't exist
-      let cursorIndicator = document.getElementById('cursor-event-indicator');
-      if (!cursorIndicator) {
-        cursorIndicator = document.createElement('div');
-        cursorIndicator.id = 'cursor-event-indicator';
-        cursorIndicator.className = 'cursor-event-indicator';
-        document.body.appendChild(cursorIndicator);
-        
-        // Copy content from the original event for the cursor indicator
-        cursorIndicator.innerHTML = draggingEvent.innerHTML;
-        
-        // Copy styles from the original event
-        const eventStyles = window.getComputedStyle(draggingEvent);
-        const stylesToCopy = ['width', 'height', 'padding', 'border-radius'];
-        
-        stylesToCopy.forEach(style => {
-          cursorIndicator.style[style] = eventStyles[style];
-        });
-      }
-      
-      // Position and style the cursor indicator directly at the cursor
-      cursorIndicator.style.position = 'fixed';
-      cursorIndicator.style.left = `${e.clientX}px`;
-      cursorIndicator.style.top = `${e.clientY}px`;
-      cursorIndicator.style.transform = 'translate(-50%, -30px)'; // Position it slightly above cursor
-      cursorIndicator.style.zIndex = '1100';
-      cursorIndicator.style.pointerEvents = 'none';
-      
-      // Add same color class as original event
-      for (const className of draggingEvent.classList) {
-        if (className.includes('-event') && className !== 'calendar-event') {
-          cursorIndicator.className = 'cursor-event-indicator ' + className;
-          break;
-        }
-      }
-      
-      if (cellUnder && cellUnder.classList.contains('hour-cell')) {
-        // Get the cell dimensions
-        const cellRect = cellUnder.getBoundingClientRect();
-        
-        // Snap to 15-minute intervals within the hour
-        const cellTop = cellRect.top;
-        const cellHeight = cellRect.height;
-        
-        // Calculate relative position within the cell (0-1)
-        const relativePos = (cellCheckY - cellTop) / cellHeight;
-        
-        // Snap to nearest 15-minute interval (0, 0.25, 0.5, 0.75)
-        const snapPoints = [0, 0.25, 0.5, 0.75, 1];
-        const snapIndex = snapPoints.reduce((closest, current, index) => {
-          return Math.abs(current - relativePos) < Math.abs(snapPoints[closest] - relativePos) 
-            ? index 
-            : closest;
-        }, 0);
-        
-        // Set top position to the snapped position
-        const snappedTop = cellTop + (snapPoints[snapIndex] * cellHeight);
-        
-        // Get original event dimensions for proper ghost outline sizing
-        const eventHeight = parseFloat(draggingEvent.style.height) || (draggingEvent.offsetHeight + 'px');
-        
-        // Show ghost outline at target position
-        ghostOutline.style.display = 'block';
-        ghostOutline.style.position = 'fixed';
-        ghostOutline.style.left = `${cellRect.left}px`;
-        ghostOutline.style.top = `${snappedTop}px`;
-        ghostOutline.style.width = `${cellRect.width}px`;
-        ghostOutline.style.height = eventHeight;
-        ghostOutline.style.zIndex = '999';
-        
-        // Copy some style properties from the original event to the ghost outline
-        for (const className of draggingEvent.classList) {
-          if (className.includes('-event') && className !== 'calendar-event') {
-            ghostOutline.className = 'event-ghost-outline ' + className;
-            break;
-          }
-        }
-        
-        // Store the target hour and minute for later use when saving
-        const hourValue = parseInt(cellUnder.dataset.hour || '0');
-        const minuteValue = Math.round(snapPoints[snapIndex] * 60);
-        
-        draggingEvent.dataset.targetHour = hourValue;
-        draggingEvent.dataset.targetMinute = minuteValue;
-        draggingEvent.dataset.targetDate = cellUnder.dataset.date;
-        
-        // Show feedback in ghost outline
-        const timeStr = `${hourValue}:${minuteValue.toString().padStart(2, '0')}`;
-        ghostOutline.setAttribute('title', timeStr);
-        
-      } else if (cellUnder && cellUnder.classList.contains('all-day-cell')) {
-        // Handle dragging to all-day cell
-        const cellRect = cellUnder.getBoundingClientRect();
-        
-        // Show ghost outline at target position for all-day cell
-        ghostOutline.style.display = 'block';
-        ghostOutline.style.position = 'fixed';
-        ghostOutline.style.left = `${cellRect.left}px`;
-        ghostOutline.style.top = `${cellRect.top}px`;
-        ghostOutline.style.width = `${cellRect.width}px`;
-        ghostOutline.style.height = 'auto';
-        ghostOutline.style.minHeight = '30px';  // Set a minimum height
-        ghostOutline.style.zIndex = '999';
-        
-        draggingEvent.dataset.targetDate = cellUnder.dataset.date;
-        draggingEvent.dataset.allDay = 'true';
-        
-        // Copy some style properties from the original event to the ghost outline
-        for (const className of draggingEvent.classList) {
-          if (className.includes('-event') && className !== 'calendar-event') {
-            ghostOutline.className = 'event-ghost-outline ' + className;
-            break;
-          }
-        }
-      } else {
-        // Hide ghost outline when not over a valid cell
-        ghostOutline.style.display = 'none';
-      }
-      
-      return;
+      // Append to the cell instead of body
+      dragStartCell.appendChild(dragIndicator);
     }
     
     // Handle creating new events
     if (isDragging && dragIndicator) {
-      const rect = dragStartCell.getBoundingClientRect();
-      let height = e.clientY - dragStartCell.getBoundingClientRect().top;
+      // Get the mouse position relative to the start cell
+      const startCellRect = dragStartCell.getBoundingClientRect();
+      const relativeY = e.clientY - startCellRect.top;
       
       // Ensure minimum height
+      let height = relativeY;
       if (height < 10) height = 10;
       
       // Snap height to 15-minute intervals (each 15 min is 25% of hour height)
-      const hourHeight = rect.height;
+      const hourHeight = startCellRect.height;
       const snapHeight = Math.round(height / (hourHeight * 0.25)) * (hourHeight * 0.25);
       
       dragIndicator.style.height = `${snapHeight}px`;
       
       // Determine which cell we're over
       const elemBelow = document.elementFromPoint(
-        rect.left + rect.width / 2,
+        startCellRect.left + startCellRect.width / 2,
         e.clientY
       );
       
       if (elemBelow && (elemBelow.classList.contains('hour-cell') || elemBelow.classList.contains('all-day-cell'))) {
         dragEndCell = elemBelow;
+      }
+    }
+    
+    // Handle dragging of existing events
+    if (isDraggingEvent && draggingEvent) {
+      // Calculate distance dragged from start position
+      const dx = e.clientX - dragStartPosition.x;
+      const dy = e.clientY - dragStartPosition.y;
+      const dragDistance = Math.sqrt(dx * dx + dy * dy);
+      
+      // Set flag if we've passed the threshold
+      if (dragDistance >= dragThreshold) {
+        hasPassedDragThreshold = true;
+      }
+      
+      // Only start moving if we've passed the threshold
+      if (hasPassedDragThreshold) {
+        // Add dragging class if not already added
+        if (!draggingEvent.classList.contains('dragging')) {
+          draggingEvent.classList.add('dragging');
+          
+          // Create a stationary ghost in the original position
+          const originalGhost = document.createElement('div');
+          originalGhost.id = 'original-ghost';
+          originalGhost.className = `original-ghost ${draggingEvent.dataset.color || 'blue'}-event`;
+          
+          // Clone content from the original event
+          originalGhost.innerHTML = draggingEvent.innerHTML;
+          
+          // Match the original event's dimensions and position
+          const rect = draggingEvent.getBoundingClientRect();
+          originalGhost.style.position = 'absolute';
+          originalGhost.style.width = getComputedStyle(draggingEvent).width;
+          originalGhost.style.height = rect.height + 'px';
+          originalGhost.style.top = draggingEvent.style.top;
+          originalGhost.style.left = draggingEvent.style.left;
+          originalGhost.style.opacity = '0.3';
+          originalGhost.style.pointerEvents = 'none';
+          
+          // Add to the parent container
+          if (draggingEvent.parentNode) {
+            draggingEvent.parentNode.appendChild(originalGhost);
+          }
+        }
+        
+        // Get the element we're over
+        const elemBelow = document.elementFromPoint(
+          e.clientX - eventDragOffset.x + 5, // Offset slightly to ensure we get the cell
+          e.clientY - eventDragOffset.y + 5
+        );
+        
+        // Create ghost outline if it doesn't exist
+        let ghostOutline = document.getElementById('event-ghost-outline');
+        if (!ghostOutline) {
+          // Create a ghost outline at the original position
+          ghostOutline = document.createElement('div');
+          ghostOutline.id = 'event-ghost-outline';
+          ghostOutline.className = `event-ghost-outline ${draggingEvent.dataset.color || 'blue'}-event`;
+          
+          // Copy content from the original event
+          ghostOutline.innerHTML = `
+            <div class="event-title">${draggingEvent.dataset.title || 'Event'}</div>
+            ${!draggingEvent.dataset.allDay ? '<div class="event-time">...</div>' : ''}
+            ${draggingEvent.dataset.location ? `<div class="event-location">${draggingEvent.dataset.location}</div>` : ''}
+          `;
+          
+          // Match the original event's size
+          const rect = draggingEvent.getBoundingClientRect();
+          ghostOutline.style.height = rect.height + 'px';
+          
+          // Add to the body temporarily
+          document.body.appendChild(ghostOutline);
+        }
+        
+        // Create dragged event that follows cursor if it doesn't exist
+        let draggedEvent = document.getElementById('dragged-event');
+        if (!draggedEvent) {
+          draggedEvent = document.createElement('div');
+          draggedEvent.id = 'dragged-event';
+          draggedEvent.className = `dragged-event ${draggingEvent.dataset.color || 'blue'}-event`;
+          
+          // Clone the entire content from the original event
+          draggedEvent.innerHTML = draggingEvent.innerHTML;
+          
+          // Set appropriate dimensions based on the original
+          const rect = draggingEvent.getBoundingClientRect();
+          draggedEvent.style.width = '200px';
+          draggedEvent.style.height = 'auto';
+          draggedEvent.style.position = 'fixed';
+          draggedEvent.style.pointerEvents = 'none';
+          draggedEvent.style.zIndex = '1000';
+          draggedEvent.style.boxShadow = '0 4px 8px rgba(0,0,0,0.5)';
+          draggedEvent.style.transform = 'rotate(2deg)';
+          
+          document.body.appendChild(draggedEvent);
+        }
+        
+        // Move the dragged event with the cursor
+        if (draggedEvent) {
+          draggedEvent.style.top = `${e.clientY - eventDragOffset.y}px`;
+          draggedEvent.style.left = `${e.clientX - eventDragOffset.x}px`;
+        }
+        
+        // Move the ghost outline to the current target cell if available
+        if (ghostOutline && elemBelow) {
+          let targetCell = null;
+          
+          // Get the target cell
+          if (elemBelow.classList.contains('hour-cell')) {
+            targetCell = elemBelow;
+          } else if (elemBelow.classList.contains('all-day-cell')) {
+            targetCell = elemBelow;
+          } else {
+            // Try to find a parent cell
+            targetCell = elemBelow.closest('.hour-cell') || elemBelow.closest('.all-day-cell');
+          }
+          
+          if (targetCell) {
+            // Calculate position relative to the target cell
+            const targetRect = targetCell.getBoundingClientRect();
+            
+            // If this is an hour cell, calculate position based on cursor location
+            if (targetCell.classList.contains('hour-cell')) {
+              const cellHeight = targetRect.height;
+              const positionInCell = e.clientY - targetRect.top;
+              const minuteRatio = positionInCell / cellHeight;
+              const minutes = Math.floor(minuteRatio * 60);
+              
+              // Snap to 5-minute intervals for minute position
+              const snappedMinutes = Math.round(minutes / 5) * 5;
+              const minutePercentage = (snappedMinutes / 60) * 100;
+              
+              // Move the ghost outline to the target cell
+              if (ghostOutline.parentNode !== targetCell) {
+                // Remove from previous parent if exists
+                if (ghostOutline.parentNode) {
+                  ghostOutline.parentNode.removeChild(ghostOutline);
+                }
+                
+                // Add to new target cell
+                targetCell.appendChild(ghostOutline);
+                
+                // Reset styles for cell positioning
+                ghostOutline.style.position = 'absolute';
+                ghostOutline.style.width = 'calc(100% - 8px)';
+                ghostOutline.style.left = '4px';
+              }
+              
+              // Position based on minutes within the hour
+              ghostOutline.style.top = `${minutePercentage}%`;
+            } 
+            // If all-day cell, position the outline in the all-day row
+            else if (targetCell.classList.contains('all-day-cell')) {
+              if (ghostOutline.parentNode !== targetCell) {
+                // Remove from previous parent if exists
+                if (ghostOutline.parentNode) {
+                  ghostOutline.parentNode.removeChild(ghostOutline);
+                }
+                
+                // Add to the all-day cell
+                targetCell.appendChild(ghostOutline);
+                
+                // Reset styles for all-day positioning
+                ghostOutline.style.position = 'relative';
+                ghostOutline.style.width = 'auto';
+                ghostOutline.style.top = '0';
+                ghostOutline.style.left = '0';
+                ghostOutline.style.height = 'auto';
+                ghostOutline.style.margin = '2px 4px';
+              }
+            }
+          }
+        }
+        
+        // Store target data if we're over a valid cell
+        if (elemBelow) {
+          if (elemBelow.classList.contains('hour-cell')) {
+            // Get hour from the cell
+            draggingEvent.dataset.targetHour = elemBelow.dataset.hour;
+            
+            // Calculate minutes based on cursor position within the hour cell
+            const cellRect = elemBelow.getBoundingClientRect();
+            const positionInCell = e.clientY - cellRect.top;
+            const minuteRatio = positionInCell / cellRect.height;
+            const minutes = Math.floor(minuteRatio * 60);
+            
+            // Snap to 5-minute intervals
+            const snappedMinutes = Math.round(minutes / 5) * 5;
+            draggingEvent.dataset.targetMinute = snappedMinutes;
+            
+            // Get date from the cell
+            draggingEvent.dataset.targetDate = elemBelow.dataset.date;
+            draggingEvent.dataset.allDay = 'false';
+          } else if (elemBelow.classList.contains('all-day-cell')) {
+            draggingEvent.dataset.targetDate = elemBelow.dataset.date;
+            draggingEvent.dataset.allDay = 'true';
+          }
+        }
       }
     }
   }
@@ -1417,6 +1500,12 @@ document.addEventListener('DOMContentLoaded', () => {
   function handleDragEnd(e) {
     // Remove the drag operation flag
     document.body.dataset.inDragOperation = 'false';
+    
+    // Clean up resize indicator
+    const resizeIndicator = document.getElementById('resize-indicator');
+    if (resizeIndicator) {
+      resizeIndicator.remove();
+    }
     
     // Clean up ghost outline and cursor indicator
     const ghostOutline = document.getElementById('event-ghost-outline');
@@ -1427,6 +1516,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const cursorIndicator = document.getElementById('cursor-event-indicator');
     if (cursorIndicator) {
       cursorIndicator.remove();
+    }
+    
+    // Clean up dragged event element
+    const draggedEvent = document.getElementById('dragged-event');
+    if (draggedEvent) {
+      draggedEvent.remove();
+    }
+    
+    // Clean up original ghost
+    const originalGhost = document.getElementById('original-ghost');
+    if (originalGhost) {
+      originalGhost.remove();
     }
     
     // Handle event resizing
@@ -1451,7 +1552,7 @@ document.addEventListener('DOMContentLoaded', () => {
           // Only apply change if it meets minimum duration
           if (endTimeInMinutes - newStartTimeInMinutes >= minimumEventDurationMinutes) {
             events[eventIndex].startDate = newDate;
-            events[eventIndex].startTime = `${newHour.toString().padStart(2, '0')}:${newMinute.toString().padStart(2, '0')}`;
+            events[eventIndex].startTime = `${String(newHour).padStart(2, '0')}:${String(newMinute).padStart(2, '0')}`;
           }
         } 
         else if (resizeEdge === 'bottom' && resizingEvent.dataset.targetEndHour) {
@@ -1468,7 +1569,7 @@ document.addEventListener('DOMContentLoaded', () => {
           // Only apply change if it meets minimum duration
           if (newEndTimeInMinutes - startTimeInMinutes >= minimumEventDurationMinutes) {
             events[eventIndex].endDate = newDate;
-            events[eventIndex].endTime = `${newHour.toString().padStart(2, '0')}:${newMinute.toString().padStart(2, '0')}`;
+            events[eventIndex].endTime = `${String(newHour).padStart(2, '0')}:${String(newMinute).padStart(2, '0')}`;
           }
         }
         
@@ -1552,7 +1653,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 events[eventIndex].endDate = newDate;
               }
               
-              events[eventIndex].endTime = `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
+              events[eventIndex].endTime = `${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}`;
             }
           }
           
@@ -1611,20 +1712,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Continue with event creation - selection is large enough
+        // Create selection box that will stay anchored to the calendar cell
         const selectionBox = document.createElement('div');
         selectionBox.className = 'drag-event-selection';
         selectionBox.style.position = 'absolute';
-        selectionBox.style.left = dragIndicator.style.left;
-        selectionBox.style.top = dragIndicator.style.top;
-        selectionBox.style.width = dragIndicator.style.width;
+        selectionBox.style.left = '0';
+        selectionBox.style.top = '0';
+        selectionBox.style.width = '100%';
         selectionBox.style.height = dragIndicator.style.height;
         selectionBox.style.backgroundColor = 'rgba(66, 133, 244, 0.3)';
         selectionBox.style.border = '1px solid rgba(66, 133, 244, 0.8)';
         selectionBox.style.zIndex = '100';
         
         // Replace the temporary indicator with the permanent selection box
-        document.body.removeChild(dragIndicator);
-        document.body.appendChild(selectionBox);
+        // Make sure we add it to the cell rather than to the document body
+        // This ensures it stays anchored to the calendar grid when scrolling
+        if (dragIndicator.parentNode === dragStartCell) {
+          dragStartCell.replaceChild(selectionBox, dragIndicator);
+        } else {
+          dragIndicator.remove();
+          dragStartCell.appendChild(selectionBox);
+        }
         
         // Calculate the event times based on the cells
         const startDate = dragStartCell.dataset.date;
@@ -1638,19 +1746,19 @@ document.addEventListener('DOMContentLoaded', () => {
           
           // Calculate start minute based on where in the cell the drag began
           const startCellRect = dragStartCell.getBoundingClientRect();
-          const dragStartY = selectionBox.style.top.replace('px', '');
-          const relativeStartPos = (dragStartY - startCellRect.top) / startCellRect.height;
+          const selectionRect = selectionBox.getBoundingClientRect();
+          const relativeStartPos = (selectionRect.top - startCellRect.top) / startCellRect.height;
           startMin = Math.floor(relativeStartPos * 60);
           
           // Calculate end hour/minute
           endHour = parseInt(dragEndCell.dataset.hour);
           
           // Calculate end minute based on height of the indicator
-          const indicatorHeight = parseFloat(selectionBox.style.height);
+          const selectionHeight = selectionBox.offsetHeight;
           const endCellHeight = dragEndCell.getBoundingClientRect().height;
           
           // Assuming height is snapped to 15-min intervals (25% of hour height)
-          const additionalMinutes = Math.round((indicatorHeight / endCellHeight) * 60);
+          const additionalMinutes = Math.round((selectionHeight / endCellHeight) * 60);
           endMin = Math.min(startMin + additionalMinutes, 59);
           
           // If the end hour is the same as start hour but minutes would roll over,
@@ -1716,6 +1824,12 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Function that renders the calendar without creating duplicate events
   function renderCalendarWithExistingEvents() {
+    // Store current scroll position
+    const scrollContainer = document.querySelector('.day-grid') || 
+                            document.querySelector('.week-grid') || 
+                            document.querySelector('.days-grid');
+    const scrollPosition = scrollContainer ? scrollContainer.scrollTop : 0;
+    
     // Clear existing preview events
     const existingPreviews = document.querySelectorAll('.preview-event');
     existingPreviews.forEach(preview => preview.remove());
@@ -1740,6 +1854,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (currentSelectedEvent) {
       selectEvent(currentSelectedEvent);
     }
+    
+    // Restore scroll position after rendering
+    setTimeout(() => {
+      const newScrollContainer = document.querySelector('.day-grid') || 
+                                document.querySelector('.week-grid') || 
+                                document.querySelector('.days-grid');
+      if (newScrollContainer && scrollPosition > 0) {
+        newScrollContainer.scrollTop = scrollPosition;
+      }
+    }, 0);
   }
   
   // Render the calendar based on current view and date
@@ -1766,6 +1890,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     calendarContainer.innerHTML = calendarHTML;
+    
+    // Clear any existing events before rendering new ones
+    const existingEvents = document.querySelectorAll('.calendar-event');
+    existingEvents.forEach(event => event.remove());
     
     // Render all saved events
     console.log('Rendering events:', events.length);
@@ -1806,6 +1934,7 @@ document.addEventListener('DOMContentLoaded', () => {
         display: flex;
         flex: 1;
         overflow-y: auto;
+        position: relative; /* Ensure proper positioning context */
       }
       
       .time-column {
@@ -2023,7 +2152,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       /* Cursor indicator styling for event dragging */
       .cursor-event-indicator {
-        position: fixed;
+        position: absolute;
         padding: 4px 8px;
         border-radius: 4px;
         font-size: 12px;
@@ -2037,6 +2166,14 @@ document.addEventListener('DOMContentLoaded', () => {
         opacity: 0.9;
         border-left: 4px solid;
         cursor: move;
+      }
+      
+      /* Preview event styling */
+      .preview-event {
+        position: absolute; 
+        width: calc(100% - 8px);
+        left: 4px;
+        z-index: 101;
       }
       
       .blue-event {
@@ -2235,6 +2372,24 @@ document.addEventListener('DOMContentLoaded', () => {
       .hour-cell, .all-day-cell {
         position: relative;
       }
+      
+      /* Styling for resize handles */
+      .event-resize-handle-top, .event-resize-handle-bottom {
+        position: absolute;
+        left: 0;
+        width: 100%;
+        height: 6px;
+        cursor: ns-resize;
+        z-index: 11;
+      }
+      
+      .event-resize-handle-top {
+        top: 0;
+      }
+      
+      .event-resize-handle-bottom {
+        bottom: 0;
+      }
     `;
     
     styleEl.textContent = customStyles;
@@ -2250,8 +2405,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }, 60000);
     }
     
-    // Scroll to current time if it's day or week view
-    if (currentView === 'day' || currentView === 'week') {
+    // Scroll to current time if it's day or week view and auto-scroll is enabled
+    if (autoScrollToCurrentTime && (currentView === 'day' || currentView === 'week')) {
       const now = new Date();
       const currentHour = now.getHours();
       
@@ -2510,7 +2665,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingsOptions = [
       { name: 'Weekends', shortcut: 'shift ⌘ E', checked: showWeekends, setting: 'weekends' },
       { name: 'Declined events', shortcut: 'shift ⌘ D', checked: showDeclinedEvents, setting: 'declined' },
-      { name: 'Week numbers', shortcut: '', checked: showWeekNumbers, setting: 'weekNumbers' }
+      { name: 'Week numbers', shortcut: '', checked: showWeekNumbers, setting: 'weekNumbers' },
+      { name: 'Auto-scroll to current time', shortcut: '', checked: autoScrollToCurrentTime, setting: 'autoScroll' }
     ];
     
     settingsOptions.forEach(setting => {
@@ -2566,6 +2722,9 @@ document.addEventListener('DOMContentLoaded', () => {
             break;
           case 'weekNumbers':
             showWeekNumbers = setting.checked;
+            break;
+          case 'autoScroll':
+            autoScrollToCurrentTime = setting.checked;
             break;
         }
         
@@ -2936,20 +3095,43 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
     
-    // Add keyboard event listener for deleting events
-    document.addEventListener('keydown', (e) => {
-      // Delete selected event when Delete or Backspace is pressed
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedEvent) {
-        // Prevent default behavior if we're in a text input
-        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+    // Improved keyboard event listener for deleting events
+    document.addEventListener('keydown', function(e) {
+      // Make sure we have a selected event
+      if (!selectedEvent) return;
+      
+      // Support both Delete and Backspace keys (with keyCode fallback for older browsers)
+      if (e.key === 'Delete' || e.key === 'Backspace' || e.keyCode === 46 || e.keyCode === 8) {
+        // Only process if we're not in an input or textarea
+        const activeElement = document.activeElement;
+        const isTextField = activeElement.tagName === 'INPUT' || 
+                            activeElement.tagName === 'TEXTAREA' ||
+                            activeElement.isContentEditable;
+        
+        if (!isTextField) {
+          // Prevent default browser behavior like page navigation
           e.preventDefault();
+          console.log('Deleting event with ID:', selectedEvent);
+          
+          // Close sidebar if it's open
+          const eventSidebar = document.querySelector('.create-event-sidebar.active');
+          if (eventSidebar) {
+            eventSidebar.classList.remove('active');
+          }
+          
+          // Delete the event
           deleteSelectedEvent();
+          
+          // Prevent event from bubbling up to parent elements
+          e.stopPropagation();
         }
       }
-    });
+    }, true); // Use capturing phase to ensure we get the event first
     
     // Render initial calendar
     renderCalendar();
+    
+    setupContextMenu();
   }
   
   // Delete the currently selected event
@@ -2979,6 +3161,13 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Create a new event
   function createEvent(eventData) {
+    // Check if this event already exists on the page to prevent duplicates
+    const existingEvent = document.querySelector(`.calendar-event[data-id="${eventData.id}"]`);
+    if (existingEvent) {
+      console.log('Event already exists in DOM, skipping:', eventData.id);
+      return existingEvent;
+    }
+
     // Create event element
     const eventElement = document.createElement('div');
     eventElement.className = `calendar-event ${eventData.color || 'blue'}-event`;
@@ -3022,14 +3211,25 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     // Determine where to place the event
-    let targetCell;
+    let targetCell = null;
     
     // Debug date information
     console.log('Looking for cell to place event with date:', eventData.startDate);
     
     if (eventData.allDay) {
-      // All-day event
-      targetCell = document.querySelector(`.all-day-cell[data-date="${eventData.startDate}"]`);
+      // All-day event - get a specific cell in the current view
+      if (currentView === 'day') {
+        targetCell = document.querySelector(`.all-day-cell[data-date="${eventData.startDate}"]`);
+      } else if (currentView === 'week') {
+        // In week view, be more specific by limiting to one match
+        const allCells = document.querySelectorAll(`.all-day-cell[data-date="${eventData.startDate}"]`);
+        if (allCells.length > 0) {
+          targetCell = allCells[0]; // Use the first matching cell
+        }
+      } else {
+        targetCell = document.querySelector(`.all-day-cell[data-date="${eventData.startDate}"]`);
+      }
+      
       console.log('Looking for all-day cell with data-date=', eventData.startDate);
       if (!targetCell) {
         // For debugging, log all available cell dates
@@ -3041,7 +3241,19 @@ document.addEventListener('DOMContentLoaded', () => {
       const [startHour, startMinute] = eventData.startTime.split(':').map(Number);
       
       // Hourly event - find the starting hour cell
-      targetCell = document.querySelector(`.hour-cell[data-date="${eventData.startDate}"][data-hour="${startHour}"]`);
+      if (currentView === 'day') {
+        // In day view, there should only be one cell per hour
+        targetCell = document.querySelector(`.hour-cell[data-date="${eventData.startDate}"][data-hour="${startHour}"]`);
+      } else if (currentView === 'week') {
+        // In week view, be more specific to avoid duplicates
+        const dayCells = document.querySelectorAll(`.hour-cell[data-date="${eventData.startDate}"][data-hour="${startHour}"]`);
+        if (dayCells.length > 0) {
+          targetCell = dayCells[0]; // Only use the first matching cell
+        }
+      } else {
+        targetCell = document.querySelector(`.hour-cell[data-date="${eventData.startDate}"][data-hour="${startHour}"]`);
+      }
+      
       console.log('Looking for hour cell with data-date=', eventData.startDate, 'and hour=', startHour);
       
       if (targetCell) {
@@ -3069,7 +3281,7 @@ document.addEventListener('DOMContentLoaded', () => {
             eventElement.style.height = `${durationHours * 100}%`;
             
             // Calculate the position from the top of the hour based on minutes
-            // Each minute is 1/60 of the cell height
+            // Each minute is 1/60 of the cell height - use percentages to stay anchored during scroll
             const minuteOffset = (startMinute / 60) * 100;
             
             // Position the event with the minute offset
@@ -3142,5 +3354,74 @@ document.addEventListener('DOMContentLoaded', () => {
         eventEl.classList.add('selected-event');
       }
     }
+  }
+  
+  // Add this function after selectEvent function
+  function setupContextMenu() {
+    // Create context menu element
+    const contextMenu = document.createElement('div');
+    contextMenu.className = 'calendar-context-menu';
+    contextMenu.style.display = 'none';
+    contextMenu.style.position = 'absolute';
+    contextMenu.style.backgroundColor = 'var(--card-bg)';
+    contextMenu.style.border = '1px solid var(--border-color)';
+    contextMenu.style.boxShadow = '0 2px 5px rgba(0,0,0,0.3)';
+    contextMenu.style.borderRadius = '4px';
+    contextMenu.style.zIndex = '1000';
+    contextMenu.style.minWidth = '150px';
+    document.body.appendChild(contextMenu);
+    
+    // Handle right-click on events
+    document.addEventListener('contextmenu', e => {
+      const eventElement = e.target.closest('.calendar-event');
+      if (eventElement) {
+        e.preventDefault();
+        
+        // Get event ID and select it
+        const eventId = eventElement.dataset.id;
+        selectEvent(eventId);
+        
+        // Clear existing menu items
+        contextMenu.innerHTML = '';
+        
+        // Add menu items
+        const editOption = document.createElement('div');
+        editOption.textContent = 'Edit Event';
+        editOption.style.padding = '8px 12px';
+        editOption.style.cursor = 'pointer';
+        editOption.style.borderBottom = '1px solid var(--border-color)';
+        editOption.addEventListener('click', () => {
+          const eventData = events.find(event => event.id === eventId);
+          if (eventData) {
+            showEventSidebar(eventData, true);
+          }
+          contextMenu.style.display = 'none';
+        });
+        
+        const deleteOption = document.createElement('div');
+        deleteOption.textContent = 'Delete Event';
+        deleteOption.style.padding = '8px 12px';
+        deleteOption.style.cursor = 'pointer';
+        deleteOption.style.color = '#f44336';
+        deleteOption.addEventListener('click', () => {
+          deleteSelectedEvent();
+          contextMenu.style.display = 'none';
+        });
+        
+        // Add options to menu
+        contextMenu.appendChild(editOption);
+        contextMenu.appendChild(deleteOption);
+        
+        // Position menu at cursor
+        contextMenu.style.left = `${e.clientX}px`;
+        contextMenu.style.top = `${e.clientY}px`;
+        contextMenu.style.display = 'block';
+      }
+    });
+    
+    // Hide context menu when clicking elsewhere
+    document.addEventListener('click', () => {
+      contextMenu.style.display = 'none';
+    });
   }
 }); 
